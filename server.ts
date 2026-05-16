@@ -216,6 +216,11 @@ app.use((req, res, next) => {
   next();
 });
 
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.get("/api/admissions/active", async (req, res) => {
   const facility_id = req.query.facility_id as string;
   try {
@@ -554,7 +559,11 @@ app.post("/api/login", async (req, res) => {
 
 // Catch-all for API to prevent HTML responses
 app.all("/api/*", (req, res) => {
-  res.status(404).json({ error: `API route ${req.method} ${req.url} not found` });
+  console.warn(`404 API Route: ${req.method} ${req.url}`);
+  res.status(404).json({ 
+    error: `API route ${req.method} ${req.url} not found`,
+    hint: "Ensure the backend is correctly routing this request."
+  });
 });
 
 

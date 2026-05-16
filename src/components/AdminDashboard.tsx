@@ -24,6 +24,7 @@ interface Facility {
 export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserType }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -33,6 +34,11 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
   useEffect(() => {
     fetchData();
   }, []);
+
+  const filteredFacilities = facilities.filter(f => 
+    f.health_facility_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.facility_type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -124,22 +130,84 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Map View */}
                 <div className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'} border rounded-3xl p-6 shadow-sm`}>
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="font-black text-[10px] uppercase tracking-widest text-slate-400">Facility Distribution</h2>
-                    <MapPin className="w-4 h-4 text-primary" />
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <MapPin className="w-4 h-4 text-primary" />
+                      </div>
+                      <h2 className="font-black text-[10px] uppercase tracking-widest text-slate-400">Facility Distribution</h2>
+                    </div>
+                    
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <input 
+                        type="text"
+                        placeholder="Search name or type..."
+                        className={`w-full pl-9 pr-4 py-2 rounded-xl text-[10px] font-bold border focus:ring-4 focus:ring-primary/5 outline-none transition-all ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-400'}`}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="h-[400px] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 relative z-0">
                     <UnifiedMap 
                       center={{ lat: -6.7924, lng: 39.2083 }}
                       zoom={10}
                       isDark={isDark}
-                      markers={facilities.map(f => ({
+                      markers={filteredFacilities.map(f => ({
                         id: f.id,
                         lat: f.location_lat || -6.7924,
                         lng: f.location_lng || 39.2083,
                         label: f.health_facility_name
                       }))}
                     />
+                  </div>
+                </div>
+
+                {/* Facilities List (Directory) */}
+                <div className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'} border rounded-3xl p-6 shadow-sm overflow-hidden flex flex-col`}>
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <Building2 className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <h2 className="font-black text-[10px] uppercase tracking-widest text-slate-400">Facilities Directory</h2>
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
+                      {filteredFacilities.length} Results
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[355px]">
+                    {filteredFacilities.length > 0 ? (
+                      filteredFacilities.map((f) => (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          key={f.id} 
+                          className={`p-4 rounded-2xl border transition-all hover:border-primary/30 ${isDark ? 'bg-slate-700/30 border-slate-600' : 'bg-slate-50 border-slate-100'}`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-bold text-xs mb-0.5">{f.health_facility_name}</h3>
+                              <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">{f.facility_type}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-mono text-slate-500">ID: {f.id.slice(0, 8)}</span>
+                              <div className="flex items-center gap-1 text-[8px] text-slate-400 mt-1">
+                                <MapPin className="w-2.5 h-2.5" />
+                                <span>{f.location_lat.toFixed(4)}, {f.location_lng.toFixed(4)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-50">
+                        <Search className="w-8 h-8 mb-4" />
+                        <p className="text-xs font-medium">No facilities found matching "{searchQuery}"</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
