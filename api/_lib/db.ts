@@ -30,41 +30,54 @@ export function decrypt(text: string): string {
   return decrypted.toString();
 }
 
-// Database client
 const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
 const dbUrl = process.env.DATABASE_URL || (isVercel ? "" : "file:partoflow.db");
 
-export const db = createClient({
-  url: dbUrl,
-  authToken: process.env.DATABASE_AUTH_TOKEN,
-});
+// Database client - Lazy initialized
+let dbInstance: any = null;
+
+export const db = {
+  execute: async (args: any) => {
+    if (!dbInstance) await ensureDb();
+    return dbInstance.execute(args);
+  },
+  batch: async (args: any) => {
+    if (!dbInstance) await ensureDb();
+    return dbInstance.batch(args);
+  }
+};
 
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
 
 export async function ensureDb() {
-  if (isInitialized) return;
+  if (isInitialized && dbInstance) return;
   if (initPromise) return initPromise;
   
-  const maskedUrl = dbUrl ? (dbUrl.startsWith('http') ? dbUrl.split('@').pop()?.substring(0, 20) + '...' : 'local-file') : 'MISSING';
-  console.log(`Connection Request: URL=${maskedUrl}, Vercel=${isVercel}`);
-
-  if (isVercel && (!dbUrl || dbUrl.startsWith("file:"))) {
-    throw new Error("Missing remote DATABASE_URL. Please set it in Vercel settings.");
+  if (isVercel && (!dbUrl || dbUrl.trim() === "")) {
+    console.error("CRITICAL: DATABASE_URL is missing in Vercel environment.");
+    throw new Error("Missing DATABASE_URL environment variable.");
   }
 
   initPromise = (async () => {
     try {
-      // In a serverless environment, we only want to ensure the connection works
-      // We don't want to block every request with heavy schema checks
-      await db.execute("SELECT 1");
+      console.log(`Creating DB client for: ${isVercel ? 'Vercel' : 'Local'}`);
       
-      // Run schema checks in the background without 'await' to speed up response
+      dbInstance = createClient({
+        url: dbUrl,
+        authToken: process.env.DATABASE_AUTH_TOKEN,
+      });
+
+      // Verify connection
+      await dbInstance.execute("SELECT 1");
+      
+      // Background schema check
       initDb().catch(err => console.error("Background Schema Error:", err));
       
       isInitialized = true;
-    } catch (err) {
-      console.error("DB Connection Failure:", err);
+    } catch (err: any) {
+      console.error("DB Connection Failure:", err.message);
+      dbInstance = null;
       isInitialized = false;
       throw err;
     } finally {
