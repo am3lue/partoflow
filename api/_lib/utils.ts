@@ -1,29 +1,54 @@
-import { v4 as uuidv4 } from "uuid";
-import crypto from "crypto";
+// Web Crypto API based encryption for Vercel Edge Runtime
+const ENCRYPTION_KEY_STR = process.env.ENCRYPTION_KEY || "fallback_secret_for_dev_mode_only";
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "fallback_secret_for_dev_mode_only";
-const IV_LENGTH = 16;
-const ALGORITHM = 'aes-256-cbc';
-const key = crypto.createHash('sha256').update(String(ENCRYPTION_KEY)).digest();
+async function getCryptoKey() {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(ENCRYPTION_KEY_STR.padEnd(32, '0').substring(0, 32));
+  return await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "AES-CBC" },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
 
-export function encrypt(text: string): string {
+export async function encrypt(text: string): Promise<string> {
   if (!text) return text;
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  let encrypted = cipher.update(text);
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
+  const key = await getCryptoKey();
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const encoder = new TextEncoder();
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-CBC", iv },
+    key,
+    encoder.encode(text)
+  );
+
+  const ivHex = Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('');
+  const contentHex = Array.from(new Uint8Array(encrypted)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${ivHex}:${contentHex}`;
 }
 
-export function decrypt(text: string): string {
+export async function decrypt(text: string): Promise<string> {
   if (!text || !text.includes(':')) return text;
-  const textParts = text.split(':');
-  const iv = Buffer.from(textParts.shift()!, 'hex');
-  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  return decrypted.toString();
+  try {
+    const [ivHex, contentHex] = text.split(':');
+    const key = await getCryptoKey();
+    const iv = new Uint8Array(ivHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const encrypted = new Uint8Array(contentHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-CBC", iv },
+      key,
+      encrypted
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch (e) {
+    console.error("Decryption failed:", e);
+    return text;
+  }
 }
 
-export { uuidv4 };
+export function uuidv4() {
+  return crypto.randomUUID();
+}

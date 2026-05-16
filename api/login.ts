@@ -1,13 +1,28 @@
 import { db, ensureDb } from "./_lib/db";
 
-export default async function handler(req: any, res: any) {
-  const { id_number, password } = req.body;
-  
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req: Request) {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
+    const body = await req.json();
+    const { id_number, password } = body || {};
+    
     await ensureDb();
     
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
+    if (!id_number || !password) {
+      return new Response(JSON.stringify({ error: "ID number and password are required" }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const result = await db.execute({
@@ -16,22 +31,30 @@ export default async function handler(req: any, res: any) {
     });
     
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return new Response(JSON.stringify({ error: "Invalid credentials" }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     
     const user = result.rows[0] as any;
-    res.json({ 
+    return new Response(JSON.stringify({ 
       id: user.id, 
       health_facility_name: user.health_facility_name, 
       role: user.role,
       is_admin: Boolean(user.is_admin)
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (err: any) {
     console.error("Login failure:", err);
-    res.status(500).json({ 
+    return new Response(JSON.stringify({ 
       error: "Authentication service error", 
-      message: err.message,
-      details: err.code || "No error code"
+      message: err.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
