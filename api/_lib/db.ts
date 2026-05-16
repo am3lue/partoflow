@@ -73,8 +73,10 @@ export async function ensureDb() {
 
 export async function initDb() {
   try {
-    // Check if we can reach the database and run migrations
-    // We use a transaction or serial execution for stability
+    console.log("Running schema initialization...");
+    
+    // Create tables in a single batch if possible, or sequentially
+    // Using simple CREATE TABLE IF NOT EXISTS is safe and idempotent
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -93,24 +95,6 @@ export async function initDb() {
         password TEXT
       )
     `);
-
-    // Migration logic
-    const tableInfo = await db.execute("PRAGMA table_info(users)");
-    const columns = tableInfo.rows.map((r: any) => r.name);
-    const requiredColumns = [
-      "first_name", "middle_name", "last_name", "age", 
-      "id_number", "location_lat", "location_lng", "physical_address", "password",
-      "facility_type", "health_facility_name", "role", "is_admin"
-    ];
-
-    for (const col of requiredColumns) {
-      if (!columns.includes(col)) {
-        const type = (col === 'age' || col === 'is_admin') ? 'INTEGER' : (col.includes('location')) ? 'REAL' : 'TEXT';
-        try {
-          await db.execute(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
-        } catch (e) {}
-      }
-    }
 
     await db.execute(`
       CREATE TABLE IF NOT EXISTS team_members (
@@ -163,22 +147,56 @@ export async function initDb() {
       )
     `);
 
-    // Ensure default admin
-    const adminCheck = await db.execute({
-      sql: "SELECT id FROM users WHERE id_number = ?",
-      args: ["ADMIN001"]
-    });
-
-    if (adminCheck.rows.length === 0) {
-      await db.execute({
-        sql: `INSERT INTO users (id, role, is_admin, first_name, last_name, id_number, password, health_facility_name) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: ["admin-1", "admin", 1, "System", "Admin", "ADMIN001", "admin123", "Ministry of Health"]
+    // Ensure default admin exists
+    try {
+      const adminCheck = await db.execute({
+        sql: "SELECT id FROM users WHERE id_number = ?",
+        args: ["ADMIN001"]
       });
+
+      if (adminCheck.rows.length === 0) {
+        console.log("Creating default admin user...");
+        await db.execute({
+          sql: `INSERT INTO users (id, role, is_admin, first_name, last_name, id_number, password, health_facility_name) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: ["admin-1", "admin", 1, "System", "Admin", "ADMIN001", "admin123", "Ministry of Health"]
+        });
+      }
+    } catch (e) {
+      console.warn("Could not verify/create default admin:", e);
     }
+
+    // Optional: Check for missing columns and add them asynchronously
+    checkAndAddMissingColumns().catch(err => console.warn("Migration check error (non-fatal):", err));
 
   } catch (err) {
     console.error("DATABASE INITIALIZATION ERROR:", err);
     throw err;
+  }
+}
+
+async function checkAndAddMissingColumns() {
+  try {
+    const tableInfo = await db.execute("PRAGMA table_info(users)");
+    if (!tableInfo || !tableInfo.rows) return;
+    
+    const columns = tableInfo.rows.map((r: any) => r.name);
+    const requiredColumns = [
+      { name: "middle_name", type: "TEXT" },
+      { name: "facility_type", type: "TEXT" },
+      { name: "physical_address", type: "TEXT" }
+    ];
+
+    for (const col of requiredColumns) {
+      if (!columns.includes(col.name)) {
+        try {
+          await db.execute(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+          console.log(`Added missing column: ${col.name}`);
+        } catch (e) {}
+      }
+    }
+  } catch (e) {
+    // PRAGMA might not be supported over HTTP in some cases
+    console.debug("Migration check skipped (PRAGMA likely not supported)");
   }
 }

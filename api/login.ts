@@ -8,6 +8,12 @@ export default async function handler(req: any, res: any) {
 
   const { id_number, password } = req.body;
   try {
+    await ensureDb();
+    
+    if (!id_number || !password) {
+      return res.status(400).json({ error: "Missing ID number or password" });
+    }
+
     const result = await db.execute({
       sql: "SELECT * FROM users WHERE id_number = ? AND password = ?",
       args: [id_number, password]
@@ -25,12 +31,11 @@ export default async function handler(req: any, res: any) {
       is_admin: Boolean(user.is_admin)
     });
   } catch (err: any) {
-    console.error("Login error details:", err);
+    console.error("Login failure:", err);
     res.status(500).json({ 
-      error: "Authentication failed", 
+      error: "Authentication service error", 
       message: err.message,
-      code: err.code,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      details: err.code || "No error code"
     });
   }
 }
