@@ -2,18 +2,18 @@ import { db, ensureDb } from "./_lib/db";
 import { uuidv4 } from "./_lib/utils";
 
 export default async function handler(req: any, res: any) {
-  await ensureDb();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { 
-    event_id, examination_time, temp, bp, pulse, contractions, contraction_strength, 
-    presentation, lie, cx_position, cx_texture, cx_dilatation, descent, 
-    membrane_status, amniotic_fluid_color 
-  } = req.body;
-  const id = uuidv4();
   try {
+    await ensureDb();
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { 
+      event_id, examination_time, temp, bp, pulse, contractions, contraction_strength, 
+      presentation, lie, cx_position, cx_texture, cx_dilatation, descent, 
+      membrane_status, amniotic_fluid_color 
+    } = req.body;
+    const id = uuidv4();
     await db.execute({
       sql: `INSERT INTO examinations (
         id, event_id, examination_time, temp, bp, pulse, contractions, 
@@ -29,10 +29,7 @@ export default async function handler(req: any, res: any) {
     });
     res.status(201).json({ id });
   } catch (err: any) {
-    console.error("Error adding examination segment details:", err);
-    res.status(500).json({ 
-      error: "Failed to add examination segment",
-      message: err.message
-    });
+    console.error("Handler error:", err);
+    res.status(500).json({ error: "Service error", message: err.message });
   }
 }

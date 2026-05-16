@@ -2,21 +2,21 @@ import { db, ensureDb } from "./_lib/db";
 import { uuidv4 } from "./_lib/utils";
 
 export default async function handler(req: any, res: any) {
-  await ensureDb();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { 
-    first_name, middle_name, last_name, age, id_number, 
-    health_facility_name, facility_type, location, physical_address, team_members, password 
-  } = req.body;
-  
-  if (!id_number || !password || !health_facility_name) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
   try {
+    await ensureDb();
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { 
+      first_name, middle_name, last_name, age, id_number, 
+      health_facility_name, facility_type, location, physical_address, team_members, password 
+    } = req.body;
+    
+    if (!id_number || !password || !health_facility_name) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     const existing = await db.execute({
       sql: "SELECT id FROM users WHERE id_number = ?",
       args: [id_number]
@@ -58,11 +58,7 @@ export default async function handler(req: any, res: any) {
       is_admin: false 
     });
   } catch (err: any) {
-    console.error("Signup error details:", err);
-    res.status(500).json({ 
-      error: "Protocol error during registration",
-      message: err.message,
-      code: err.code
-    });
+    console.error("Handler error:", err);
+    res.status(500).json({ error: "Service error", message: err.message });
   }
 }

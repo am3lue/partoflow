@@ -2,13 +2,13 @@ import { db, ensureDb } from "../_lib/db";
 import { decrypt } from "../_lib/utils";
 
 export default async function handler(req: any, res: any) {
-  await ensureDb();
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const user_id = req.query.user_id as string;
   try {
+    await ensureDb();
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const user_id = req.query.user_id as string;
     const userResult = await db.execute({
       sql: "SELECT role, is_admin FROM users WHERE id = ?",
       args: [user_id || '']
@@ -41,8 +41,8 @@ export default async function handler(req: any, res: any) {
       deliveries: totalDelivered.rows[0].count,
       recent_activity: activity
     });
-  } catch (err) {
-    console.error("Admin stats error:", err);
-    res.status(500).json({ error: "Failed to fetch stats" });
+  } catch (err: any) {
+    console.error("Handler error:", err);
+    res.status(500).json({ error: "Service error", message: err.message });
   }
 }

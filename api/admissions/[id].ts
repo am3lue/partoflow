@@ -2,14 +2,14 @@ import { db, ensureDb } from "../_lib/db";
 import { decrypt } from "../_lib/utils";
 
 export default async function handler(req: any, res: any) {
-  await ensureDb();
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { id } = req.query; // Vercel provides dynamic segments in query
-  
   try {
+    await ensureDb();
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { id } = req.query; // Vercel provides dynamic segments in query
+    
     const admission = await db.execute({
       sql: "SELECT * FROM admissions WHERE event_id = ?",
       args: [id]
@@ -31,8 +31,8 @@ export default async function handler(req: any, res: any) {
       args: [id]
     });
     res.json({ ...decryptedRow, examinations: exams.rows });
-  } catch (err) {
-    console.error("Error fetching admission details:", err);
-    res.status(500).json({ error: "Failed to fetch admission details" });
+  } catch (err: any) {
+    console.error("Handler error:", err);
+    res.status(500).json({ error: "Service error", message: err.message });
   }
 }

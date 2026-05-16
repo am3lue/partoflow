@@ -2,13 +2,13 @@ import { db, ensureDb } from "../_lib/db";
 import { decrypt } from "../_lib/utils";
 
 export default async function handler(req: any, res: any) {
-  await ensureDb();
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const facility_id = req.query.facility_id as string;
   try {
+    await ensureDb();
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const facility_id = req.query.facility_id as string;
     const userResult = await db.execute({
       sql: "SELECT role, is_admin FROM users WHERE id = ?",
       args: [facility_id || '']
@@ -36,8 +36,8 @@ export default async function handler(req: any, res: any) {
       address: decrypt(row.address)
     }));
     res.json(rows);
-  } catch (err) {
-    console.error("Error fetching history:", err);
-    res.status(500).json({ error: "Failed to fetch history" });
+  } catch (err: any) {
+    console.error("Handler error:", err);
+    res.status(500).json({ error: "Service error", message: err.message });
   }
 }

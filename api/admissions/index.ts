@@ -2,18 +2,18 @@ import { db, ensureDb } from "../_lib/db";
 import { uuidv4, encrypt } from "../_lib/utils";
 
 export default async function handler(req: any, res: any) {
-  await ensureDb();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { 
-    client_name, age, address, gravidity, parity, living, height, 
-    risk_factors, date_of_admission, time_of_admission, facility_id 
-  } = req.body;
-  
-  const event_id = uuidv4();
   try {
+    await ensureDb();
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { 
+      client_name, age, address, gravidity, parity, living, height, 
+      risk_factors, date_of_admission, time_of_admission, facility_id 
+    } = req.body;
+    
+    const event_id = uuidv4();
     await db.execute({
       sql: `INSERT INTO admissions (
         event_id, facility_id, client_name, age, address, gravidity, parity, living, 
@@ -25,8 +25,8 @@ export default async function handler(req: any, res: any) {
       ]
     });
     res.status(201).json({ event_id });
-  } catch (err) {
-    console.error("Error creating admission:", err);
-    res.status(500).json({ error: "Failed to create admission" });
+  } catch (err: any) {
+    console.error("Handler error:", err);
+    res.status(500).json({ error: "Service error", message: err.message });
   }
 }
