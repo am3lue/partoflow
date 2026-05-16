@@ -1,0 +1,6 @@
+{
+  "name": "PartoFlow",
+  "description": "Digital clinical partograph and labor management system with real-time monitoring and AES-256 data encryption.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
