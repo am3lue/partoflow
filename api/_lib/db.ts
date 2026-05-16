@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client";
+import { createClient } from "@libsql/client/web";
 import crypto from "crypto";
 import dotenv from "dotenv";
 
@@ -68,8 +68,8 @@ export async function ensureDb() {
         authToken: process.env.DATABASE_AUTH_TOKEN,
       });
 
-      // Verify connection
-      await dbInstance.execute("SELECT 1");
+      // Verification - Skip heavy check on first touch to see if it stops the crash
+      // await dbInstance.execute("SELECT 1");
       
       // Background schema check
       initDb().catch(err => console.error("Background Schema Error:", err));
