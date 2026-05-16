@@ -1,6 +1,7 @@
-import { db } from "../../_lib/db";
+import { db, ensureDb } from "../../_lib/db";
 
 export default async function handler(req: any, res: any) {
+  await ensureDb();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

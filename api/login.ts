@@ -1,6 +1,7 @@
-import { db } from "./_lib/db";
+import { db, ensureDb } from "./_lib/db";
 
 export default async function handler(req: any, res: any) {
+  await ensureDb();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -23,8 +24,13 @@ export default async function handler(req: any, res: any) {
       role: user.role,
       is_admin: Boolean(user.is_admin)
     });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: "Authentication failed" });
+  } catch (err: any) {
+    console.error("Login error details:", err);
+    res.status(500).json({ 
+      error: "Authentication failed", 
+      message: err.message,
+      code: err.code,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 }

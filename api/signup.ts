@@ -1,7 +1,8 @@
-import { db } from "./_lib/db";
+import { db, ensureDb } from "./_lib/db";
 import { uuidv4 } from "./_lib/utils";
 
 export default async function handler(req: any, res: any) {
+  await ensureDb();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -56,8 +57,12 @@ export default async function handler(req: any, res: any) {
       role: 'dispensary', 
       is_admin: false 
     });
-  } catch (err) {
-    console.error("Signup error:", err);
-    res.status(500).json({ error: "Protocol error during registration" });
+  } catch (err: any) {
+    console.error("Signup error details:", err);
+    res.status(500).json({ 
+      error: "Protocol error during registration",
+      message: err.message,
+      code: err.code
+    });
   }
 }

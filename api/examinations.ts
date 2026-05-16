@@ -1,7 +1,8 @@
-import { db } from "./_lib/db";
+import { db, ensureDb } from "./_lib/db";
 import { uuidv4 } from "./_lib/utils";
 
 export default async function handler(req: any, res: any) {
+  await ensureDb();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -27,8 +28,11 @@ export default async function handler(req: any, res: any) {
       ]
     });
     res.status(201).json({ id });
-  } catch (err) {
-    console.error("Error adding examination segment:", err);
-    res.status(500).json({ error: "Failed to add examination segment" });
+  } catch (err: any) {
+    console.error("Error adding examination segment details:", err);
+    res.status(500).json({ 
+      error: "Failed to add examination segment",
+      message: err.message
+    });
   }
 }

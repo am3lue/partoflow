@@ -31,15 +31,50 @@ export function decrypt(text: string): string {
 }
 
 // Database client
+const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
 export const db = createClient({
-  url: process.env.DATABASE_URL || "file:partoflow.db",
+  url: process.env.DATABASE_URL || (isVercel ? "file:/tmp/partoflow.db" : "file:partoflow.db"),
   authToken: process.env.DATABASE_AUTH_TOKEN,
 });
+
+let isInitialized = false;
+let initPromise: Promise<void> | null = null;
+
+export async function ensureDb() {
+  if (isInitialized) return;
+  if (initPromise) return initPromise;
+  
+  initPromise = (async () => {
+    try {
+      const dbUrl = process.env.DATABASE_URL || "";
+      console.log(`Initializing DB connection to: ${dbUrl.substring(0, 10)}... (Vercel: ${isVercel})`);
+      
+      // If we are on Vercel and have a remote URL, we might want to skip the check-write test
+      // as it's primarily for local file debugging
+      if (isVercel && dbUrl && !dbUrl.startsWith("file:")) {
+         // Just a quick check to see if we can reach the DB
+         await db.execute("SELECT 1");
+      }
+
+      await initDb();
+      isInitialized = true;
+      console.log("DB Initialization complete.");
+    } catch (err) {
+      console.error("Delayed DB Init Error details:", err);
+      // We don't re-throw here to allow the function to try to proceed 
+    } finally {
+      initPromise = null;
+    }
+  })();
+  
+  return initPromise;
+}
 
 export async function initDb() {
   try {
     // Check if we can write to the database
-    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:')) {
+    const dbUrl = process.env.DATABASE_URL || "";
+    if (!dbUrl || dbUrl.startsWith('file:')) {
       console.log("Using local file database.");
       try {
         await db.execute("CREATE TABLE IF NOT EXISTS _write_test (id INTEGER PRIMARY KEY)");
