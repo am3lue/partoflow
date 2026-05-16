@@ -1,21 +1,33 @@
 import { db, ensureDb } from "./_lib/db";
 import { uuidv4 } from "./_lib/utils";
 
-export default async function handler(req: any, res: any) {
-  try {
-    await ensureDb();
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
+export const config = {
+  runtime: 'edge',
+};
 
+export default async function handler(req: Request) {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const body = await req.json();
     const { 
-      first_name, middle_name, last_name, age, id_number, 
-      health_facility_name, facility_type, location, physical_address, team_members, password 
-    } = req.body;
+      first_name, last_name, id_number, 
+      health_facility_name, password 
+    } = body;
     
     if (!id_number || !password || !health_facility_name) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
+
+    await ensureDb();
 
     const existing = await db.execute({
       sql: "SELECT id FROM users WHERE id_number = ?",
@@ -23,42 +35,42 @@ export default async function handler(req: any, res: any) {
     });
 
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: "Staff Identifier already in use" });
+      return new Response(JSON.stringify({ error: "Staff Identifier already in use" }), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const user_id = uuidv4();
     
     await db.execute({
       sql: `INSERT INTO users (
-        id, role, first_name, middle_name, last_name, age, id_number, 
-        health_facility_name, facility_type, location_lat, location_lng, physical_address, password
-      ) VALUES (?, 'dispensary', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, role, first_name, last_name, id_number, 
+        health_facility_name, password, is_admin
+      ) VALUES (?, 'dispensary', ?, ?, ?, ?, ?, 0)`,
       args: [
-        user_id, first_name, middle_name, last_name, Number(age) || 0, id_number,
-        health_facility_name, facility_type, 
-        location?.lat || 0, location?.lng || 0, physical_address, password
+        user_id, first_name || "", last_name || "", id_number,
+        health_facility_name, password
       ]
     });
 
-    if (team_members && Array.isArray(team_members)) {
-      for (const member of team_members) {
-        if (member.name) {
-          await db.execute({
-            sql: "INSERT INTO team_members (id, facility_id, name, role) VALUES (?, ?, ?, ?)",
-            args: [uuidv4(), user_id, member.name, member.role || '']
-          });
-        }
-      }
-    }
-
-    res.status(201).json({ 
+    return new Response(JSON.stringify({ 
       id: user_id, 
       health_facility_name: health_facility_name, 
       role: 'dispensary', 
       is_admin: false 
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (err: any) {
-    console.error("Handler error:", err);
-    res.status(500).json({ error: "Service error", message: err.message });
+    console.error("Signup error:", err);
+    return new Response(JSON.stringify({ 
+      error: "Registration failed",
+      message: err.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
