@@ -193,7 +193,20 @@ export function ExaminationFormModal({
             </div>
             <div>
               <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Dilatation (cm)</label>
-              <input type="number" required max={10} min={0} className="w-full p-3 bg-slate-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 bg-amber-50/50 rounded-xl focus:border-amber-400 outline-none text-sm font-black text-amber-700 dark:text-amber-500" value={formData.cx_dilatation} onChange={e => setFormData({...formData, cx_dilatation: e.target.value})} />
+              <input 
+                type="number" 
+                required 
+                max={10} 
+                min={0} 
+                className="w-full p-3 bg-slate-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 bg-amber-50/50 rounded-xl focus:border-amber-400 outline-none text-sm font-black text-amber-700 dark:text-amber-500" 
+                value={formData.cx_dilatation} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || (Number(val) >= 0 && Number(val) <= 10)) {
+                    setFormData({...formData, cx_dilatation: val});
+                  }
+                }} 
+              />
             </div>
           </div>
         </div>

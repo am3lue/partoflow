@@ -46,7 +46,21 @@ const db = createClient({
 });
 
 async function initDb() {
-  await db.execute(`
+  try {
+    // Check if we can write to the database (especially important in ephemeral/serverless environments)
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:')) {
+      console.log("Using local file database. Note: Data will not persist in most serverless environments.");
+      try {
+        const filePath = process.env.DATABASE_URL?.replace('file:', '') || 'partoflow.db';
+        // Test write by creating a temp table
+        await db.execute("CREATE TABLE IF NOT EXISTS _write_test (id INTEGER PRIMARY KEY)");
+        await db.execute("DROP TABLE _write_test");
+      } catch (e) {
+        console.error("DATABASE PERSISTENCE WARNING: Local filesystem is not writable. Registration will fail.");
+      }
+    }
+
+    await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       role TEXT CHECK(role IN ('admin', 'dispensary')),
@@ -189,6 +203,10 @@ async function initDb() {
     }
 
     console.log("Database initialized with seed data.");
+    }
+  } catch (err) {
+    console.error("DATABASE INITIALIZATION ERROR:", err);
+    throw err;
   }
 }
 
@@ -417,17 +435,33 @@ app.post("/api/signup", async (req, res) => {
     health_facility_name, facility_type, location, physical_address, team_members, password 
   } = req.body;
   
-  const user_id = uuidv4();
+  console.log(`Signup attempt for ID: ${id_number} at ${health_facility_name}`);
+
+  if (!id_number || !password || !health_facility_name) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
   try {
-    // Encrypt sensitive name info? User asked to encrypt records. 
-    // I'll encrypt names for consistency with their request for medical records.
+    // Check if user already exists
+    const existing = await db.execute({
+      sql: "SELECT id FROM users WHERE id_number = ?",
+      args: [id_number]
+    });
+
+    if (existing.rows.length > 0) {
+      console.warn(`Signup failed: ID Number ${id_number} already in use`);
+      return res.status(409).json({ error: "Staff Identifier already in use" });
+    }
+
+    const user_id = uuidv4();
+    
     await db.execute({
       sql: `INSERT INTO users (
         id, role, first_name, middle_name, last_name, age, id_number, 
         health_facility_name, facility_type, location_lat, location_lng, physical_address, password
       ) VALUES (?, 'dispensary', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
-        user_id, first_name, middle_name, last_name, Number(age), id_number,
+        user_id, first_name, middle_name, last_name, Number(age) || 0, id_number,
         health_facility_name, facility_type, 
         location?.lat || 0, location?.lng || 0, physical_address, password
       ]
@@ -435,22 +469,28 @@ app.post("/api/signup", async (req, res) => {
 
     if (team_members && Array.isArray(team_members)) {
       for (const member of team_members) {
-        await db.execute({
-          sql: "INSERT INTO team_members (id, facility_id, name, role) VALUES (?, ?, ?, ?)",
-          args: [uuidv4(), user_id, member.name, member.role]
-        });
+        if (member.name) {
+          await db.execute({
+            sql: "INSERT INTO team_members (id, facility_id, name, role) VALUES (?, ?, ?, ?)",
+            args: [uuidv4(), user_id, member.name, member.role || '']
+          });
+        }
       }
     }
 
+    console.log(`User created successfully: ${user_id}`);
     res.status(201).json({ 
       id: user_id, 
-      name: health_facility_name, 
+      health_facility_name: health_facility_name, 
       role: 'dispensary', 
       is_admin: false 
     });
   } catch (err) {
-    console.error("Signup error:", err);
-    res.status(500).json({ error: "Failed to create account", details: String(err) });
+    console.error("Critical Signup error:", err);
+    res.status(500).json({ 
+      error: "Protocol error during registration", 
+      details: process.env.NODE_ENV === 'production' ? "Contact system administrator" : String(err) 
+    });
   }
 });
 

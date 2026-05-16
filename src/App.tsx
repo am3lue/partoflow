@@ -167,17 +167,20 @@ export default function App() {
         body: JSON.stringify(signupData)
       });
 
-      if (!res.ok) throw new Error('Registration failed');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.details || errorData.error || 'Registration failed');
+      }
       
       const data = await res.json();
       setUser(data);
       addNotification('Account created successfully');
       setScreen('dashboard');
       setShowSignup(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setLoginError('Registration failed');
-      addNotification('Registration failed', 'error');
+      setLoginError(err.message || 'Registration failed');
+      addNotification(err.message || 'Registration failed', 'error');
     } finally {
       setIsLoading(false);
     }

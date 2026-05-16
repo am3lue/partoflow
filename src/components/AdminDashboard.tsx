@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Users, Activity, CheckCircle2, MapPin, Search, UserPlus, ShieldCheck, X, Eye, EyeOff, LayoutDashboard } from 'lucide-react';
+import { Building2, Users, Activity, CheckCircle2, MapPin, Search, UserPlus, ShieldCheck, X, Eye, EyeOff, LayoutDashboard, Shield } from 'lucide-react';
 import { Logo } from './Logo';
+import { SecurityVerificationModal } from './SettingsModals';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -41,6 +42,8 @@ export function AdminDashboard({ isDark }: { isDark: boolean }) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -270,16 +273,36 @@ export function AdminDashboard({ isDark }: { isDark: boolean }) {
                 </button>
               </div>
               
-              <AdminCreatorForm isDark={isDark} onSuccess={() => { setIsCreateModalOpen(false); fetchData(); }} />
+              <AdminCreatorForm 
+                isDark={isDark} 
+                onSuccess={() => { setIsCreateModalOpen(false); fetchData(); }} 
+                onRequireVerify={(action) => {
+                   setPendingAction(() => action);
+                   setIsVerifyModalOpen(true);
+                }}
+              />
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      <SecurityVerificationModal 
+        isOpen={isVerifyModalOpen}
+        onClose={() => setIsVerifyModalOpen(false)}
+        isDark={isDark}
+        actionLabel="Register Security Official"
+        onVerified={() => {
+          if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+          }
+        }}
+      />
     </div>
   );
 }
 
-function AdminCreatorForm({ isDark, onSuccess }: { isDark: boolean, onSuccess: () => void }) {
+function AdminCreatorForm({ isDark, onSuccess, onRequireVerify }: { isDark: boolean, onSuccess: () => void, onRequireVerify: (action: () => void) => void }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -292,8 +315,7 @@ function AdminCreatorForm({ isDark, onSuccess }: { isDark: boolean, onSuccess: (
     health_facility_name: 'Ministry of Health'
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performSubmit = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/users', {
@@ -311,6 +333,11 @@ function AdminCreatorForm({ isDark, onSuccess }: { isDark: boolean, onSuccess: (
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onRequireVerify(() => performSubmit());
   };
 
   return (

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { BookOpen, Activity, Search, ShieldCheck, FileText, Share2, ClipboardCheck, X } from 'lucide-react';
+import { Activity, Search, ShieldCheck, FileText, Share2, ClipboardCheck, X } from 'lucide-react';
+import { Logo } from './Logo';
 
 interface Props {
   onClose: () => void;
@@ -49,9 +50,7 @@ export function UserGuide({ onClose }: Props) {
       >
         <div className="p-8 border-b border-slate-50 dark:border-slate-700 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/50">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary rounded-2xl text-white shadow-teal">
-              <BookOpen className="w-5 h-5" />
-            </div>
+            <Logo size="md" />
             <div>
               <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Clinical Guide v1.0</h2>
               <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">Operating Procedures</p>
