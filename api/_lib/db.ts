@@ -32,8 +32,10 @@ export function decrypt(text: string): string {
 
 // Database client
 const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
+const dbUrl = process.env.DATABASE_URL || (isVercel ? "" : "file:partoflow.db");
+
 export const db = createClient({
-  url: process.env.DATABASE_URL || (isVercel ? "file:/tmp/partoflow.db" : "file:partoflow.db"),
+  url: dbUrl,
   authToken: process.env.DATABASE_AUTH_TOKEN,
 });
 
@@ -44,24 +46,23 @@ export async function ensureDb() {
   if (isInitialized) return;
   if (initPromise) return initPromise;
   
+  if (isVercel && (!dbUrl || dbUrl.startsWith("file:"))) {
+    console.error("Vercel deployment detected but DATABASE_URL is missing or local. Please set a remote DATABASE_URL (libsql:// or https://).");
+    throw new Error("Missing remote DATABASE_URL for Vercel deployment.");
+  }
+
   initPromise = (async () => {
     try {
-      const dbUrl = process.env.DATABASE_URL || "";
-      console.log(`Initializing DB connection to: ${dbUrl.substring(0, 10)}... (Vercel: ${isVercel})`);
+      console.log(`Initializing DB connection (Vercel: ${isVercel})`);
       
-      // If we are on Vercel and have a remote URL, we might want to skip the check-write test
-      // as it's primarily for local file debugging
-      if (isVercel && dbUrl && !dbUrl.startsWith("file:")) {
-         // Just a quick check to see if we can reach the DB
-         await db.execute("SELECT 1");
-      }
-
+      // On Vercel, we only run the schema init if it's the first time in this instance
       await initDb();
       isInitialized = true;
       console.log("DB Initialization complete.");
     } catch (err) {
-      console.error("Delayed DB Init Error details:", err);
-      // We don't re-throw here to allow the function to try to proceed 
+      console.error("Critical DB Init Error:", err);
+      isInitialized = false; // Reset to allow retry on next request if it was a transient failure
+      throw err; // Re-throw to trigger 500 in the handler so we know it failed
     } finally {
       initPromise = null;
     }
@@ -72,18 +73,8 @@ export async function ensureDb() {
 
 export async function initDb() {
   try {
-    // Check if we can write to the database
-    const dbUrl = process.env.DATABASE_URL || "";
-    if (!dbUrl || dbUrl.startsWith('file:')) {
-      console.log("Using local file database.");
-      try {
-        await db.execute("CREATE TABLE IF NOT EXISTS _write_test (id INTEGER PRIMARY KEY)");
-        await db.execute("DROP TABLE _write_test");
-      } catch (e) {
-        console.error("DATABASE PERSISTENCE WARNING: Local filesystem is not writable.");
-      }
-    }
-
+    // Check if we can reach the database and run migrations
+    // We use a transaction or serial execution for stability
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
