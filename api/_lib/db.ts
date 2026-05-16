@@ -46,23 +46,27 @@ export async function ensureDb() {
   if (isInitialized) return;
   if (initPromise) return initPromise;
   
+  const maskedUrl = dbUrl ? (dbUrl.startsWith('http') ? dbUrl.split('@').pop()?.substring(0, 20) + '...' : 'local-file') : 'MISSING';
+  console.log(`Connection Request: URL=${maskedUrl}, Vercel=${isVercel}`);
+
   if (isVercel && (!dbUrl || dbUrl.startsWith("file:"))) {
-    console.error("Vercel deployment detected but DATABASE_URL is missing or local. Please set a remote DATABASE_URL (libsql:// or https://).");
-    throw new Error("Missing remote DATABASE_URL for Vercel deployment.");
+    throw new Error("Missing remote DATABASE_URL. Please set it in Vercel settings.");
   }
 
   initPromise = (async () => {
     try {
-      console.log(`Initializing DB connection (Vercel: ${isVercel})`);
+      // In a serverless environment, we only want to ensure the connection works
+      // We don't want to block every request with heavy schema checks
+      await db.execute("SELECT 1");
       
-      // On Vercel, we only run the schema init if it's the first time in this instance
-      await initDb();
+      // Run schema checks in the background without 'await' to speed up response
+      initDb().catch(err => console.error("Background Schema Error:", err));
+      
       isInitialized = true;
-      console.log("DB Initialization complete.");
     } catch (err) {
-      console.error("Critical DB Init Error:", err);
-      isInitialized = false; // Reset to allow retry on next request if it was a transient failure
-      throw err; // Re-throw to trigger 500 in the handler so we know it failed
+      console.error("DB Connection Failure:", err);
+      isInitialized = false;
+      throw err;
     } finally {
       initPromise = null;
     }
