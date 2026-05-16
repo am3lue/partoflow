@@ -2,25 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, MapPin, Users, Lock, ChevronRight, ChevronLeft, Plus, X, Globe, Map as MapIcon, Navigation, Search } from 'lucide-react';
 import { Logo } from './Logo';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import L from 'leaflet';
-
-// Fix for default marker icons in Leaflet
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-const DefaultIcon = L.icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIconRetina,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-L.Marker.prototype.options.icon = DefaultIcon;
+import { UnifiedMap } from './UnifiedMap';
+import { detectPreciseLocation } from '../lib/location';
 
 export interface SignupData {
   first_name: string;
@@ -42,26 +25,6 @@ export interface SignupFlowProps {
   isDark?: boolean;
   key?: string | number;
   isLoading?: boolean;
-}
-
-function LocationMarker({ position, onPositionChange }: { position: { lat: number, lng: number } | null, onPositionChange: (pos: { lat: number, lng: number }) => void }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (position) {
-      map.flyTo([position.lat, position.lng], map.getZoom());
-    }
-  }, [position, map]);
-
-  useMapEvents({
-    click(e) {
-      onPositionChange(e.latlng);
-    },
-  });
-
-  return position === null ? null : (
-    <Marker position={position} icon={DefaultIcon} />
-  );
 }
 
 export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlowProps) {
@@ -90,60 +53,12 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
 
   const detectLocation = async () => {
     setIsLocating(true);
-    
-    const setCoords = (lat: number, lng: number) => {
-      setFormData(prev => ({
-        ...prev,
-        location: { lat, lng }
-      }));
-      setIsLocating(false);
-    };
-
     try {
-      // 1. Try Browser Geolocation API
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => setCoords(position.coords.latitude, position.coords.longitude),
-          async (err) => {
-            console.warn("Browser geolocation failed, trying IP fallbacks...", err.message);
-            // 2. IP Fallbacks
-            const apis = [
-              { url: 'https://ipapi.co/json/', lat: 'latitude', lng: 'longitude' },
-              { url: 'https://geolocation-db.com/json/', lat: 'latitude', lng: 'longitude' },
-              { url: 'https://freeipapi.com/api/json', lat: 'latitude', lng: 'longitude' }
-            ];
-
-            for (const api of apis) {
-              try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
-                
-                const res = await fetch(api.url, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                
-                if (!res.ok) continue;
-                const data = await res.json();
-                
-                const lat = data[api.lat];
-                const lng = data[api.lng];
-                
-                if (lat && lng) {
-                  setCoords(Number(lat), Number(lng));
-                  return;
-                }
-              } catch (e) {
-                console.warn(`Failed to fetch from ${api.url}:`, e);
-              }
-            }
-            setIsLocating(false);
-          },
-          { timeout: 8000, enableHighAccuracy: false }
-        );
-      } else {
-        setIsLocating(false);
-      }
+      const loc = await detectPreciseLocation();
+      setFormData(prev => ({ ...prev, location: { lat: loc.lat, lng: loc.lng } }));
     } catch (err) {
       console.error("Location detection error", err);
+    } finally {
       setIsLocating(false);
     }
   };
@@ -262,21 +177,12 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
                 </button>
               </div>
               <div className="h-48 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 relative z-0">
-                <MapContainer 
-                  center={formData.location || { lat: -6.7924, lng: 39.2083 }} 
-                  zoom={13} 
-                  scrollWheelZoom={false}
-                  style={{ height: '100%', width: '100%' }}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <LocationMarker 
-                    position={formData.location} 
-                    onPositionChange={(pos) => handleMapPositionChange({ lat: pos.lat, lng: pos.lng })} 
-                  />
-                </MapContainer>
+                <UnifiedMap 
+                  center={formData.location || { lat: -6.7924, lng: 39.2083 }}
+                  markers={formData.location ? [formData.location] : []}
+                  onMapClick={(pos) => handleMapPositionChange(pos)}
+                  isDark={isDark}
+                />
               </div>
               <p className="text-[9px] text-slate-400 italic text-center">Tap map or search to set: {formData.location?.lat.toFixed(4)}, {formData.location?.lng.toFixed(4)}</p>
             </div>

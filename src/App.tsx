@@ -80,7 +80,7 @@ export default function App() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admissions/active?facility_id=${user.id}&role=${user.role}&is_admin=${user.is_admin ? 1 : 0}`);
+      const res = await fetch(`/api/admissions/active?facility_id=${user.id}`);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`HTTP error ${res.status}: ${text}`);
@@ -98,7 +98,7 @@ export default function App() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admissions/history?facility_id=${user.id}&role=${user.role}&is_admin=${user.is_admin ? 1 : 0}`);
+      const res = await fetch(`/api/admissions/history?facility_id=${user.id}`);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`HTTP error ${res.status}: ${text}`);
@@ -431,7 +431,7 @@ export default function App() {
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col overflow-hidden"
               >
-                <AdminDashboard isDark={isDark} />
+                <AdminDashboard isDark={isDark} user={user!} />
               </motion.div>
             ) : screen === 'dashboard' ? (
               <motion.div 

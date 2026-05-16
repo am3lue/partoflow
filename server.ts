@@ -217,14 +217,25 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/admissions/active", async (req, res) => {
-  const { facility_id, role, is_admin } = req.query;
+  const facility_id = req.query.facility_id as string;
   try {
+    // Verify user role from database
+    const userResult = await db.execute({
+      sql: "SELECT role, is_admin FROM users WHERE id = ?",
+      args: [facility_id || '']
+    });
+    
+    const user = userResult.rows[0] as any;
+    const isAdmin = user && (user.role === 'admin' || user.is_admin === 1);
+
     let query = "SELECT * FROM admissions WHERE status = 'active'";
     let args: any[] = [];
 
-    if (role !== 'admin' && is_admin !== '1' && facility_id) {
+    if (!isAdmin && facility_id) {
       query += " AND facility_id = ?";
       args.push(facility_id);
+    } else if (!isAdmin && !facility_id) {
+      return res.status(403).json({ error: "Unauthorized access" });
     }
 
     const result = await db.execute({ sql: query, args });
@@ -241,14 +252,25 @@ app.get("/api/admissions/active", async (req, res) => {
 });
 
 app.get("/api/admissions/history", async (req, res) => {
-  const { facility_id, role, is_admin } = req.query;
+  const facility_id = req.query.facility_id as string;
   try {
+    // Verify user role from database
+    const userResult = await db.execute({
+      sql: "SELECT role, is_admin FROM users WHERE id = ?",
+      args: [facility_id || '']
+    });
+    
+    const user = userResult.rows[0] as any;
+    const isAdmin = user && (user.role === 'admin' || user.is_admin === 1);
+
     let query = "SELECT * FROM admissions WHERE status != 'active'";
     let args: any[] = [];
 
-    if (role !== 'admin' && is_admin !== '1' && facility_id) {
+    if (!isAdmin && facility_id) {
       query += " AND facility_id = ?";
       args.push(facility_id);
+    } else if (!isAdmin && !facility_id) {
+      return res.status(403).json({ error: "Unauthorized access" });
     }
 
     query += " ORDER BY date_of_admission DESC";
@@ -292,7 +314,18 @@ app.post("/api/admin/users", async (req, res) => {
 });
 
 app.get("/api/admin/stats", async (req, res) => {
+  const user_id = req.query.user_id as string;
   try {
+    // Verify admin status
+    const userResult = await db.execute({
+      sql: "SELECT role, is_admin FROM users WHERE id = ?",
+      args: [user_id || '']
+    });
+    const user = userResult.rows[0] as any;
+    if (!user || (user.role !== 'admin' && user.is_admin !== 1)) {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+
     const facilities = await db.execute("SELECT COUNT(*) as count FROM users WHERE role = 'dispensary'");
     const activeAdmissions = await db.execute("SELECT COUNT(*) as count FROM admissions WHERE status = 'active'");
     const totalDelivered = await db.execute("SELECT COUNT(*) as count FROM admissions WHERE status = 'delivered'");

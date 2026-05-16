@@ -3,23 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Users, Activity, CheckCircle2, MapPin, Search, UserPlus, ShieldCheck, X, Eye, EyeOff, LayoutDashboard, Shield } from 'lucide-react';
 import { Logo } from './Logo';
 import { SecurityVerificationModal } from './SettingsModals';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-
-// Fix for default marker icons in Leaflet
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-const DefaultIcon = L.icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIconRetina,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+import { UnifiedMap } from './UnifiedMap';
+import { User as UserType } from '../types';
 
 interface Stats {
   total_facilities: number;
@@ -36,7 +21,7 @@ interface Facility {
   location_lng: number;
 }
 
-export function AdminDashboard({ isDark }: { isDark: boolean }) {
+export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserType }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +38,7 @@ export function AdminDashboard({ isDark }: { isDark: boolean }) {
     setIsLoading(true);
     try {
       const [statsRes, facilitiesRes] = await Promise.all([
-        fetch('/api/admin/stats'),
+        fetch(`/api/admin/stats?user_id=${user.id}`),
         fetch('/api/facilities')
       ]);
       const statsData = await statsRes.json();
@@ -144,31 +129,17 @@ export function AdminDashboard({ isDark }: { isDark: boolean }) {
                     <MapPin className="w-4 h-4 text-primary" />
                   </div>
                   <div className="h-[400px] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 relative z-0">
-                    <MapContainer 
-                      center={[-6.7924, 39.2083]} 
-                      zoom={10} 
-                      style={{ height: '100%', width: '100%' }}
-                      scrollWheelZoom={false}
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      {facilities.map(f => (
-                        <Marker 
-                          key={f.id} 
-                          position={[f.location_lat || -6.7924, f.location_lng || 39.2083]} 
-                          icon={DefaultIcon}
-                        >
-                          <Popup>
-                            <div className="p-1">
-                              <p className="font-bold text-xs mb-1">{f.health_facility_name}</p>
-                              <p className="text-[10px] opacity-70 uppercase font-black">{f.facility_type}</p>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      ))}
-                    </MapContainer>
+                    <UnifiedMap 
+                      center={{ lat: -6.7924, lng: 39.2083 }}
+                      zoom={10}
+                      isDark={isDark}
+                      markers={facilities.map(f => ({
+                        id: f.id,
+                        lat: f.location_lat || -6.7924,
+                        lng: f.location_lng || 39.2083,
+                        label: f.health_facility_name
+                      }))}
+                    />
                   </div>
                 </div>
 
