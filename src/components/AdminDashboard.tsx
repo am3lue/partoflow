@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Users, Activity, CheckCircle2, MapPin, Search, UserPlus, ShieldCheck, X, Eye, EyeOff, LayoutDashboard, Shield } from 'lucide-react';
+import { Building2, Users, Activity, CheckCircle2, MapPin, Search, UserPlus, ShieldCheck, X, Eye, EyeOff, LayoutDashboard, Shield, Download } from 'lucide-react';
 import { Logo } from './Logo';
 import { SecurityVerificationModal } from './SettingsModals';
 import { UnifiedMap } from './UnifiedMap';
@@ -39,6 +39,34 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
     f.health_facility_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.facility_type.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleExportCSV = () => {
+    if (filteredFacilities.length === 0) return;
+
+    const headers = ['Facility Name', 'Type', 'Latitude', 'Longitude'];
+    const rows = filteredFacilities.map(f => [
+      f.health_facility_name,
+      f.facility_type,
+      f.location_lat,
+      f.location_lng
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `health_facilities_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -173,9 +201,18 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
                       </div>
                       <h2 className="font-black text-[10px] uppercase tracking-widest text-slate-400">Facilities Directory</h2>
                     </div>
-                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                      {filteredFacilities.length} Results
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={handleExportCSV}
+                        title="Export to CSV"
+                        className={`p-1.5 rounded-lg border transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-400 hover:text-white' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-primary'}`}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
+                        {filteredFacilities.length} Results
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[355px]">
