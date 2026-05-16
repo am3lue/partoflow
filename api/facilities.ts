@@ -1,16 +1,18 @@
 import { db, ensureDb } from "./_lib/db";
 
-export default async function handler(req: any, res: any) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req: Request) {
   try {
     await ensureDb();
     if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' });
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const result = await db.execute("SELECT id, health_facility_name, facility_type, location_lat, location_lng FROM users WHERE role = 'dispensary'");
-    res.json(result.rows);
+    const result = await db.execute("SELECT id, name, type, location_lat, location_lng, address FROM facilities");
+    return new Response(JSON.stringify(result.rows), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     console.error("Handler error:", err);
-    res.status(500).json({ error: "Service error", message: err.message });
+    return new Response(JSON.stringify({ error: "Service error", message: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

@@ -69,7 +69,7 @@ export function UnifiedMap({
           >
             {markers.map((m, i) => (
               <AdvancedMarker key={m.id || i} position={{ lat: m.lat, lng: m.lng }} title={m.label}>
-                <Pin background="#005b5c" glyphColor="#fff" borderColor="#fff" />
+                <Pin background="#005B5C" glyphColor="white" borderColor="white" />
               </AdvancedMarker>
             ))}
           </Map>

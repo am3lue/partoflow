@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, User, FileText, ChevronRight, Activity, BookOpen, ShieldCheck, HelpCircle, Lock } from 'lucide-react';
 import { DashboardLayout } from './components/DashboardLayout';
 import { PartographTimeline } from './components/PartographTimeline';
-import { AdmissionFormModal, ExaminationFormModal, DeliveryOutcomeModal } from './components/Modals';
+import { AdmissionFormModal, ObservationFormModal, DeliveryOutcomeModal } from './components/Modals';
 import { SignupFlow, SignupData } from './components/SignupFlow';
 import { UserGuide } from './components/UserGuide';
 import { AdminDashboard } from './components/AdminDashboard';
 import { SecurityVerificationModal } from './components/SettingsModals';
 import { Logo } from './components/Logo';
-import { User as UserType, Admission, Examination } from './types';
+import { User as UserType, Admission, Observation } from './types';
 
 type Screen = 'login' | 'dashboard' | 'partograph';
 
@@ -80,7 +80,7 @@ export default function App() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admissions/active?facility_id=${user.id}`);
+      const res = await fetch(`/api/admissions/active?facility_id=${user.facility_id}`);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`HTTP error ${res.status}: ${text}`);
@@ -98,7 +98,7 @@ export default function App() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admissions/history?facility_id=${user.id}`);
+      const res = await fetch(`/api/admissions/history?facility_id=${user.facility_id}`);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`HTTP error ${res.status}: ${text}`);
@@ -191,12 +191,12 @@ export default function App() {
       const res = await fetch('/api/admissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, facility_id: user?.id })
+        body: JSON.stringify({ ...data, facility_id: user?.facility_id })
       });
       const result = await res.json();
       setIsAdmissionModalOpen(false);
       addNotification('New admission recorded');
-      fetchAdmissionDetails(result.event_id);
+      fetchAdmissionDetails(result.id);
       fetchActiveAdmissions();
     } catch (err) {
       addNotification('Failed to record admission', 'error');
@@ -204,19 +204,19 @@ export default function App() {
     }
   };
 
-  const handleAddExam = async (data: any) => {
+  const handleAddObservation = async (data: any) => {
     if (!selectedAdmission) return;
     try {
-      await fetch('/api/examinations', {
+      await fetch('/api/observations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, event_id: selectedAdmission.event_id })
+        body: JSON.stringify({ ...data, admission_id: selectedAdmission.id })
       });
       setIsExamModalOpen(false);
-      addNotification('Clinical examination updated');
-      fetchAdmissionDetails(selectedAdmission.event_id);
+      addNotification('Clinical observation updated');
+      fetchAdmissionDetails(selectedAdmission.id);
     } catch (err) {
-      addNotification('Failed to save examination', 'error');
+      addNotification('Failed to save observation', 'error');
       console.error(err);
     }
   };
@@ -224,7 +224,7 @@ export default function App() {
   const handleDelivery = async () => {
     if (!selectedAdmission) return;
     try {
-      await fetch(`/api/admissions/${selectedAdmission.event_id}/deliver`, {
+      await fetch(`/api/admissions/${selectedAdmission.id}/deliver`, {
         method: 'POST'
       });
       setIsDeliveryModalOpen(false);
@@ -241,7 +241,7 @@ export default function App() {
 
   if (screen === 'login') {
     return (
-      <div className={`min-h-screen ${isDark ? 'dark bg-slate-900 text-white' : 'bg-[#005B5C] text-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-200`}>
+      <div className={`min-h-screen ${isDark ? 'dark bg-slate-900 text-white' : 'bg-primary text-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-200`}>
         {/* Background elements */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white opacity-[0.03] rounded-full -mr-64 -mt-64" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-white opacity-[0.02] rounded-full -ml-32 -mb-32" />
@@ -266,8 +266,7 @@ export default function App() {
               <div className="flex flex-col items-center mb-10 text-center">
                 <Logo size="lg" className="mb-6" />
                 <h1 
-                  className={`text-3xl font-black tracking-tighter mb-1 transition-colors duration-300`}
-                  style={{ color: isDark ? '#005b5c' : '#005b5c' }}
+                  className={`text-3xl font-black tracking-tighter mb-1 transition-colors duration-300 text-primary`}
                 >
                   PartoFlow
                 </h1>
@@ -281,13 +280,7 @@ export default function App() {
                     name="id_number" 
                     required 
                     placeholder="ID Number"
-                    className={`w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all`}
-                    style={{ 
-                      backgroundColor: '#e4e4e4',
-                      borderColor: isDark ? '#475569' : '#005b5c',
-                      color:  '#005b5c',
-                      borderWidth: '1px'
-                    }}
+                    className="w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-slate-100 dark:bg-slate-700/50 border-primary/20 dark:border-slate-600 text-primary dark:text-slate-100"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -297,13 +290,7 @@ export default function App() {
                     type="password" 
                     required 
                     placeholder="••••••••"
-                    className={`w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all`}
-                    style={{ 
-                      backgroundColor: '#e4e4e4',
-                      borderColor: isDark ? '#475569' : '#005b5c',
-                      color:  '#005b5c',
-                      borderWidth: '1px'
-                    }}
+                    className="w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-slate-100 dark:bg-slate-700/50 border-primary/20 dark:border-slate-600 text-primary dark:text-slate-100"
                   />
                 </div>
                 
@@ -392,20 +379,20 @@ export default function App() {
             ) : (
               admissionsList.map(adm => (
                 <div 
-                  key={adm.event_id}
-                  onClick={() => fetchAdmissionDetails(adm.event_id)}
-                  className={`p-4 rounded-xl cursor-pointer transition-all border ${selectedAdmission?.event_id === adm.event_id && screen === 'partograph' ? 'bg-primary text-white border-primary shadow-teal' : `${isDark ? 'bg-slate-700 hover:bg-slate-600 border-slate-700' : 'border-transparent hover:bg-slate-100'}`}`}
+                  key={adm.id}
+                  onClick={() => fetchAdmissionDetails(adm.id)}
+                  className={`p-4 rounded-xl cursor-pointer transition-all border ${selectedAdmission?.id === adm.id && screen === 'partograph' ? 'bg-primary text-white border-primary shadow-teal' : `${isDark ? 'bg-slate-700 hover:bg-slate-600 border-slate-700' : 'border-transparent hover:bg-slate-100'}`}`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <div className="flex items-center gap-1.5 overflow-hidden">
-                      <h3 className={`font-bold text-xs truncate capitalize ${selectedAdmission?.event_id === adm.event_id && screen === 'partograph' ? 'text-white' : isDark ? 'text-slate-100' : 'text-slate-700'}`}>{adm.client_name}</h3>
+                      <h3 className={`font-bold text-xs truncate capitalize ${selectedAdmission?.id === adm.id && screen === 'partograph' ? 'text-white' : isDark ? 'text-slate-100' : 'text-slate-700'}`}>{adm.patient_name}</h3>
                       {adm.status !== 'active' && (
-                        <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-black ${selectedAdmission?.event_id === adm.event_id && screen === 'partograph' ? 'bg-white/20' : 'bg-slate-100 opacity-50'}`}>{adm.status}</span>
+                        <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-black ${selectedAdmission?.id === adm.id && screen === 'partograph' ? 'bg-white/20' : 'bg-slate-100 opacity-50'}`}>{adm.status}</span>
                       )}
                     </div>
-                    <span className={`text-[9px] font-mono italic whitespace-nowrap ml-2 ${selectedAdmission?.event_id === adm.event_id && screen === 'partograph' ? 'text-white/60' : 'text-slate-400'}`}>{adm.time_of_admission}</span>
+                    <span className={`text-[9px] font-mono italic whitespace-nowrap ml-2 ${selectedAdmission?.id === adm.id && screen === 'partograph' ? 'text-white/60' : 'text-slate-400'}`}>{adm.admission_time}</span>
                   </div>
-                  <p className={`text-[10px] font-bold uppercase tracking-tighter ${selectedAdmission?.event_id === adm.event_id && screen === 'partograph' ? 'text-white/60' : 'text-slate-400'}`}>Age {adm.age} • G{adm.gravidity} P{adm.parity}</p>
+                  <p className={`text-[10px] font-bold uppercase tracking-tighter ${selectedAdmission?.id === adm.id && screen === 'partograph' ? 'text-white/60' : 'text-slate-400'}`}>Age {adm.patient_age} • G{adm.gravidity} P{adm.parity}</p>
                 </div>
               ))
             )}
@@ -485,10 +472,10 @@ export default function App() {
           onSave={handleAddAdmission} 
         />
         
-        <ExaminationFormModal 
+        <ObservationFormModal 
           isOpen={isExamModalOpen} 
           onClose={() => setIsExamModalOpen(false)} 
-          onSave={handleAddExam} 
+          onSave={handleAddObservation} 
         />
 
         <DeliveryOutcomeModal 

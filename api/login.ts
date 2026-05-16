@@ -26,7 +26,10 @@ export default async function handler(req: Request) {
     }
 
     const result = await db.execute({
-      sql: "SELECT * FROM users WHERE id_number = ? AND password = ?",
+      sql: `SELECT u.*, f.name as health_facility_name 
+            FROM users u 
+            LEFT JOIN facilities f ON u.facility_id = f.id 
+            WHERE u.id_number = ? AND u.password = ?`,
       args: [id_number, password]
     });
     
@@ -40,9 +43,10 @@ export default async function handler(req: Request) {
     const user = result.rows[0] as any;
     return new Response(JSON.stringify({ 
       id: user.id, 
-      health_facility_name: user.health_facility_name, 
+      health_facility_name: user.health_facility_name || 'Ministry of Health', 
       role: user.role,
-      is_admin: Boolean(user.is_admin)
+      is_admin: Boolean(user.is_admin),
+      facility_id: user.facility_id
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

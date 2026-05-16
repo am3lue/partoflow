@@ -15,7 +15,7 @@ interface Stats {
 
 interface Facility {
   id: string;
-  health_facility_name: string;
+  name: string;
   facility_type: string;
   location_lat: number;
   location_lng: number;
@@ -36,8 +36,8 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
   }, []);
 
   const filteredFacilities = facilities.filter(f => 
-    f.health_facility_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.facility_type.toLowerCase().includes(searchQuery.toLowerCase())
+    (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (f.facility_type || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleExportCSV = () => {
@@ -45,7 +45,7 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
 
     const headers = ['Facility Name', 'Type', 'Latitude', 'Longitude'];
     const rows = filteredFacilities.map(f => [
-      f.health_facility_name,
+      f.name,
       f.facility_type,
       f.location_lat,
       f.location_lng
@@ -184,10 +184,11 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
                       isDark={isDark}
                       markers={filteredFacilities.map(f => ({
                         id: f.id,
-                        lat: f.location_lat || -6.7924,
-                        lng: f.location_lng || 39.2083,
-                        label: f.health_facility_name
+                        lat: Number(f.location_lat) || -6.7924,
+                        lng: Number(f.location_lng) || 39.2083,
+                        label: f.name
                       }))}
+
                     />
                   </div>
                 </div>
@@ -226,14 +227,17 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-bold text-xs mb-0.5">{f.health_facility_name}</h3>
+                              <h3 className="font-bold text-xs mb-0.5">{f.name}</h3>
                               <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">{f.facility_type}</p>
                             </div>
                             <div className="flex flex-col items-end">
                               <span className="text-[10px] font-mono text-slate-500">ID: {f.id.slice(0, 8)}</span>
                               <div className="flex items-center gap-1 text-[8px] text-slate-400 mt-1">
                                 <MapPin className="w-2.5 h-2.5" />
-                                <span>{f.location_lat.toFixed(4)}, {f.location_lng.toFixed(4)}</span>
+                                <span>
+                                  {f.location_lat != null ? f.location_lat.toFixed(4) : '0.0000'}, 
+                                  {f.location_lng != null ? f.location_lng.toFixed(4) : '0.0000'}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -264,14 +268,14 @@ export function AdminDashboard({ isDark, user }: { isDark: boolean, user: UserTy
                         className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-100'}`}
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <span className="font-bold text-xs truncate capitalize block max-w-[150px]">{item.client_name}</span>
+                          <span className="font-bold text-xs truncate capitalize block max-w-[150px]">{item.patient_name}</span>
                           <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-black ${item.status === 'active' ? 'bg-primary/20 text-primary' : 'bg-green-100 text-green-600'}`}>
                             {item.status}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-[9px] text-slate-400 font-medium italic">{item.health_facility_name}</span>
-                          <span className="text-[9px] text-slate-400 font-mono">{item.date_of_admission}</span>
+                          <span className="text-[9px] text-slate-400 font-medium italic">{item.facility_name}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">{item.admission_time}</span>
                         </div>
                       </motion.div>
                     ))}

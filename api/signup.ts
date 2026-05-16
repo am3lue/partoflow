@@ -42,23 +42,30 @@ export default async function handler(req: Request) {
     }
 
     const user_id = uuidv4();
+    const facility_id = uuidv4();
     
+    // Create Facility first
+    await db.execute({
+      sql: `INSERT INTO facilities (id, name, type) VALUES (?, ?, 'Dispensary')`,
+      args: [facility_id, health_facility_name]
+    });
+
+    // Create User linked to facility
     await db.execute({
       sql: `INSERT INTO users (
-        id, role, first_name, last_name, id_number, 
-        health_facility_name, password, is_admin
-      ) VALUES (?, 'dispensary', ?, ?, ?, ?, ?, 0)`,
+        id, id_number, password, first_name, last_name, role, is_admin, facility_id
+      ) VALUES (?, ?, ?, ?, ?, 'staff', 0, ?)`,
       args: [
-        user_id, first_name || "", last_name || "", id_number,
-        health_facility_name, password
+        user_id, id_number, password, first_name || "", last_name || "", facility_id
       ]
     });
 
     return new Response(JSON.stringify({ 
       id: user_id, 
       health_facility_name: health_facility_name, 
-      role: 'dispensary', 
-      is_admin: false 
+      role: 'staff', 
+      is_admin: false,
+      facility_id: facility_id
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }

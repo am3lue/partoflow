@@ -124,13 +124,7 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
               <div>
                 <label className="block text-[10px] font-black text-slate-700 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Type</label>
                 <select 
-                  className="w-full p-3 border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all"
-                  style={{ 
-                    backgroundColor: '#e4e4e4',
-                    borderColor: isDark ? '#475569' : '#005b5c',
-                    color: '#005b5c',
-                    borderWidth: '1px'
-                  }}
+                  className="w-full p-3 border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-slate-100 dark:bg-slate-700 border-primary/20 dark:border-slate-600 text-primary dark:text-primary-foreground"
                   value={formData.facility_type}
                   onChange={e => setFormData({...formData, facility_type: e.target.value})}
                 >
@@ -184,7 +178,7 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
                   isDark={isDark}
                 />
               </div>
-              <p className="text-[9px] text-slate-400 italic text-center">Tap map or search to set: {formData.location?.lat.toFixed(4)}, {formData.location?.lng.toFixed(4)}</p>
+              <p className="text-[9px] text-slate-400 italic text-center">Tap map or search to set: {formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : 'Not set'}</p>
             </div>
           </div>
         );
@@ -202,18 +196,12 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
             </div>
             <div className="max-h-64 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
               {formData.team_members.map((member, i) => (
-                <div key={i} className="flex gap-2 items-end p-3 rounded-xl border relative group transition-colors"
-                  style={{ 
-                    backgroundColor: '#e4e4e4',
-                    borderColor: isDark ? '#475569' : '#005b5c',
-                    borderWidth: '1px'
-                  }}
+                <div key={i} className="flex gap-2 items-end p-3 rounded-xl border relative group transition-colors bg-slate-100 dark:bg-slate-700/50 border-primary/20 dark:border-slate-600"
                 >
                   <div className="flex-1">
-                    <label className="block text-[8px] font-black uppercase mb-1" style={{ color: '#005b5c' }}>Full Name</label>
+                    <label className="block text-[8px] font-black uppercase mb-1 text-primary">Full Name</label>
                     <input 
-                      className="w-full bg-transparent text-xs font-bold outline-none placeholder:text-[#005b5c]/50"
-                      style={{ color: '#005b5c' }}
+                      className="w-full bg-transparent text-xs font-bold outline-none placeholder:text-primary/50 text-primary dark:text-slate-200"
                       value={member.name}
                       onChange={e => updateMember(i, 'name', e.target.value)}
                       placeholder="e.g. Dr. Jane Doe"
@@ -222,8 +210,7 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
                   <div className="w-32">
                     <label className="block text-[8px] font-black text-slate-500 dark:text-slate-500 uppercase mb-1">Role</label>
                     <select 
-                      className="w-full bg-transparent text-xs font-bold outline-none"
-                      style={{ color: '#005b5c' }}
+                      className="w-full bg-transparent text-xs font-bold outline-none text-primary dark:text-slate-200"
                       value={member.role}
                       onChange={e => updateMember(i, 'role', e.target.value)}
                     >
@@ -284,8 +271,7 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
 
       <div className="mb-8">
         <h2 
-          className="text-2xl font-black tracking-tight leading-none mb-2 transition-colors duration-300"
-          style={{ color: '#005b5c' }}
+          className="text-2xl font-black tracking-tight leading-none mb-2 transition-colors duration-300 text-primary"
         >
           {step === 1 && "Personal ID"}
           {step === 2 && "Clinical Facility"}
@@ -336,13 +322,7 @@ function Input({ label, type = 'text', value, onChange, placeholder, isDark }: {
       <input 
         type={type}
         placeholder={placeholder}
-        className="w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all"
-        style={{ 
-          backgroundColor: '#e4e4e4',
-          borderColor: isDark ? '#475569' : '#005b5c',
-          color: '#005b5c',
-          borderWidth: '1px'
-        }}
+        className="w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-slate-100 dark:bg-slate-700/50 border-primary/20 dark:border-slate-600 text-primary dark:text-slate-100"
         value={value}
         onChange={e => onChange(e.target.value)}
       />

@@ -1,31 +1,33 @@
 import { db, ensureDb } from "../_lib/db";
 
-export default async function handler(req: any, res: any) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req: Request) {
   try {
     await ensureDb();
     if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
     }
 
     const { 
       first_name, last_name, id_number, password, 
-      role, is_admin, health_facility_name 
-    } = req.body;
+      role, is_admin, facility_id 
+    } = await req.json();
 
     const id = `user-${Date.now()}`;
     await db.execute({
       sql: `INSERT INTO users (
         id, first_name, last_name, id_number, password, 
-        role, is_admin, health_facility_name
+        role, is_admin, facility_id
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         id, first_name, last_name, id_number, password, 
-        role || 'dispensary', is_admin ? 1 : 0, health_facility_name || 'Ministry'
+        role || 'staff', is_admin ? 1 : 0, facility_id || 'system-facility'
       ]
     });
-    res.json({ success: true, id });
+    return new Response(JSON.stringify({ success: true, id }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     console.error("Handler error:", err);
-    res.status(500).json({ error: "Service error", message: err.message });
+    return new Response(JSON.stringify({ error: "Service error", message: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

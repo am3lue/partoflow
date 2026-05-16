@@ -1,14 +1,16 @@
 import { db, ensureDb } from "../_lib/db";
 import { decrypt } from "../_lib/utils";
 
-export default async function handler(req: any, res: any) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req: Request) {
   try {
     await ensureDb();
     if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' });
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const facility_id = req.query.facility_id as string;
+    const facility_id = new URL(req.url).searchParams.get('facility_id');
     const userResult = await db.execute({
       sql: "SELECT role, is_admin FROM users WHERE id = ?",
       args: [facility_id || '']
@@ -24,18 +26,18 @@ export default async function handler(req: any, res: any) {
       query += " AND facility_id = ?";
       args.push(facility_id);
     } else if (!isAdmin && !facility_id) {
-      return res.status(403).json({ error: "Unauthorized access" });
+      return new Response(JSON.stringify({ error: "Unauthorized access" }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     const result = await db.execute({ sql: query, args });
-    const rows = result.rows.map((row: any) => ({
+    const rows = await Promise.all(result.rows.map(async (row: any) => ({
       ...row,
-      client_name: decrypt(row.client_name),
-      address: decrypt(row.address)
-    }));
-    res.json(rows);
+      patient_name: await decrypt(row.patient_name),
+      patient_address: await decrypt(row.patient_address)
+    })));
+    return new Response(JSON.stringify(rows), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     console.error("Handler error:", err);
-    res.status(500).json({ error: "Service error", message: err.message });
+    return new Response(JSON.stringify({ error: "Service error", message: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

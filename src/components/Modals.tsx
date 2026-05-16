@@ -49,9 +49,8 @@ export function AdmissionFormModal({
   isOpen: boolean; onClose: () => void; onSave: (data: any) => void 
 }) {
   const [formData, setFormData] = useState({
-    client_name: '', age: '', address: '', gravidity: '', parity: '', living: '', 
-    height: '', risk_factors: '', date_of_admission: new Date().toISOString().split('T')[0],
-    time_of_admission: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    patient_name: '', patient_age: '', patient_address: '', gravidity: '', parity: '', living: '', 
+    height: '', risk_factors: '', admission_time: new Date().toISOString().slice(0, 16)
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,8 +67,8 @@ export function AdmissionFormModal({
             <input 
               required
               className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
-              value={formData.client_name}
-              onChange={e => setFormData({...formData, client_name: e.target.value})}
+              value={formData.patient_name}
+              onChange={e => setFormData({...formData, patient_name: e.target.value})}
             />
           </div>
           
@@ -79,8 +78,8 @@ export function AdmissionFormModal({
               <input 
                 type="number" required
                 className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm font-bold text-slate-900 dark:text-white"
-                value={formData.age}
-                onChange={e => setFormData({...formData, age: e.target.value})}
+                value={formData.patient_age}
+                onChange={e => setFormData({...formData, patient_age: e.target.value})}
               />
             </div>
             <div>
@@ -129,9 +128,21 @@ export function AdmissionFormModal({
           <label className="block text-[10px] font-black text-slate-600 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Home Address / Contact</label>
           <textarea 
             className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm font-bold text-slate-900 dark:text-white min-h-[70px]"
-            value={formData.address}
-            onChange={e => setFormData({...formData, address: e.target.value})}
+            value={formData.patient_address}
+            onChange={e => setFormData({...formData, patient_address: e.target.value})}
           />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-[10px] font-black text-slate-600 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Admission Date & Time</label>
+            <input 
+              type="datetime-local" required
+              className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm font-bold text-slate-900 dark:text-white"
+              value={formData.admission_time}
+              onChange={e => setFormData({...formData, admission_time: e.target.value})}
+            />
+          </div>
         </div>
 
         <div>
@@ -153,26 +164,25 @@ export function AdmissionFormModal({
   );
 }
 
-export function ExaminationFormModal({ 
+export function ObservationFormModal({ 
   isOpen, onClose, onSave 
 }: { 
   isOpen: boolean; onClose: () => void; onSave: (data: any) => void 
 }) {
   const [formData, setFormData] = useState({
-    temp: '37.0', bp: '120/80', pulse: '80', contractions: '3', 
-    contraction_strength: 'Moderate', presentation: 'Cephalic', 
-    lie: 'Longitudinal', cx_position: 'Mid', cx_texture: 'Thin', 
-    cx_dilatation: '4', descent: '4', membrane_status: 'Intact', 
-    amniotic_fluid_color: 'N/A'
+    temp: '37.0', bp_systolic: '120', bp_diastolic: '80', pulse: '80', 
+    fetal_heart_rate: '140', amniotic_fluid: 'I', moulding: '0',
+    dilatation: '4', descent: '4', contractions_per_10min: '3', 
+    contraction_duration: '30', urine_protein: '', urine_acetone: '', urine_volume: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, examination_time: new Date().toISOString() });
+    onSave({ ...formData, recorded_at: new Date().toISOString() });
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Hourly Examination">
+    <Modal isOpen={isOpen} onClose={onClose} title="Add Hourly Observation">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Vital Signs Row */}
         <div className="grid grid-cols-2 gap-4">
@@ -182,8 +192,8 @@ export function ExaminationFormModal({
               <input required className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:border-primary outline-none text-sm font-bold text-slate-900 dark:text-white" value={formData.temp} onChange={e => setFormData({...formData, temp: e.target.value})} />
             </div>
             <div>
-              <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">B/P (mmHg)</label>
-              <input required className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:border-primary outline-none text-sm font-bold text-slate-900 dark:text-white" value={formData.bp} onChange={e => setFormData({...formData, bp: e.target.value})} />
+              <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">B/P Systolic (mmHg)</label>
+              <input required className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:border-primary outline-none text-sm font-bold text-slate-900 dark:text-white" value={formData.bp_systolic} onChange={e => setFormData({...formData, bp_systolic: e.target.value})} />
             </div>
           </div>
           <div className="space-y-4">
@@ -192,38 +202,34 @@ export function ExaminationFormModal({
               <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:border-primary outline-none text-sm font-bold text-slate-900 dark:text-white" value={formData.pulse} onChange={e => setFormData({...formData, pulse: e.target.value})} />
             </div>
             <div>
-              <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Dilatation (cm)</label>
-              <input 
-                type="number" 
-                required 
-                max={10} 
-                min={0} 
-                className="w-full p-3 bg-slate-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 bg-amber-50/50 rounded-xl focus:border-amber-400 outline-none text-sm font-black text-amber-700 dark:text-amber-500" 
-                value={formData.cx_dilatation} 
-                onChange={e => {
-                  const val = e.target.value;
-                  if (val === '' || (Number(val) >= 0 && Number(val) <= 10)) {
-                    setFormData({...formData, cx_dilatation: val});
-                  }
-                }} 
-              />
+              <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">B/P Diastolic (mmHg)</label>
+              <input required className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:border-primary outline-none text-sm font-bold text-slate-900 dark:text-white" value={formData.bp_diastolic} onChange={e => setFormData({...formData, bp_diastolic: e.target.value})} />
             </div>
           </div>
         </div>
 
-        {/* Presentation & Lie Row */}
+        {/* Fetal Status Row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Presentation</label>
-            <select className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.presentation} onChange={e => setFormData({...formData, presentation: e.target.value})}>
-              {['Cephalic', 'Breech', 'Shoulder', 'Face'].map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
+            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Fetal Heart Rate</label>
+            <input type="number" required className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl focus:border-primary outline-none text-sm font-bold text-slate-900 dark:text-white" value={formData.fetal_heart_rate} onChange={e => setFormData({...formData, fetal_heart_rate: e.target.value})} />
           </div>
           <div>
-            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Lie</label>
-            <select className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.lie} onChange={e => setFormData({...formData, lie: e.target.value})}>
-              {['Longitudinal', 'Transverse', 'Oblique'].map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
+            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Dilatation (cm)</label>
+            <input 
+              type="number" 
+              required 
+              max={10} 
+              min={0} 
+              className="w-full p-3 bg-slate-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 bg-amber-50/50 rounded-xl focus:border-amber-400 outline-none text-sm font-black text-amber-700 dark:text-amber-500" 
+              value={formData.dilatation} 
+              onChange={e => {
+                const val = e.target.value;
+                if (val === '' || (Number(val) >= 0 && Number(val) <= 10)) {
+                  setFormData({...formData, dilatation: val});
+                }
+              }} 
+            />
           </div>
         </div>
 
@@ -233,68 +239,46 @@ export function ExaminationFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-[8px] font-bold text-slate-500 dark:text-slate-500 mb-1 ml-1">Frequency (/10m)</p>
-              <input type="number" required className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-500 rounded-lg text-sm font-bold text-slate-900 dark:text-white" value={formData.contractions} onChange={e => setFormData({...formData, contractions: e.target.value})} />
+              <input type="number" required className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-500 rounded-lg text-sm font-bold text-slate-900 dark:text-white" value={formData.contractions_per_10min} onChange={e => setFormData({...formData, contractions_per_10min: e.target.value})} />
             </div>
             <div>
-              <p className="text-[8px] font-bold text-slate-500 dark:text-slate-500 mb-1 ml-1">Strength</p>
-              <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-500 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.contraction_strength} onChange={e => setFormData({...formData, contraction_strength: e.target.value})}>
-                <option value="Mild">Mild (&lt;20s)</option>
-                <option value="Moderate">Moderate (20-40s)</option>
-                <option value="Strong">Strong (&gt;40s)</option>
-              </select>
+              <p className="text-[8px] font-bold text-slate-500 dark:text-slate-500 mb-1 ml-1">Duration (seconds)</p>
+              <input type="number" required className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-500 rounded-lg text-sm font-bold text-slate-900 dark:text-white" value={formData.contraction_duration} onChange={e => setFormData({...formData, contraction_duration: e.target.value})} />
             </div>
           </div>
         </div>
 
-        {/* Cervix & Descent Row */}
+        {/* Descent & Liquor/Moulding */}
         <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Position</label>
-            <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.cx_position} onChange={e => setFormData({...formData, cx_position: e.target.value})}>
-              {['Anterior', 'Mid', 'Posterior'].map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Texture</label>
-            <select 
-              className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-200 outline-none focus:border-primary transition-colors" 
-              value={formData.cx_texture} 
-              onChange={e => setFormData({...formData, cx_texture: e.target.value})}
-            >
-              <option value="Soft">Soft</option>
-              <option value="Firm">Firm</option>
-              <option value="Thin">Thin</option>
-              <option value="Thick">Thick</option>
-            </select>
-          </div>
           <div>
             <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Descent</label>
             <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.descent} onChange={e => setFormData({...formData, descent: e.target.value})}>
               {[5,4,3,2,1,0].map(n => <option key={n} value={n}>{n}/5</option>)}
             </select>
           </div>
-        </div>
-
-        {/* Membranes Section */}
-        <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-100 dark:border-slate-600">
-          <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Membranes & Liquor</label>
-          <div className="grid grid-cols-2 gap-3">
-            <select className="p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-500 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.membrane_status} onChange={e => setFormData({...formData, membrane_status: e.target.value})}>
-              <option value="Intact">Intact</option>
-              <option value="Ruptured">Ruptured</option>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Liquor</label>
+            <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.amniotic_fluid} onChange={e => setFormData({...formData, amniotic_fluid: e.target.value})}>
+              <option value="I">I (Intact)</option>
+              <option value="C">C (Clear)</option>
+              <option value="M">M (Meconium)</option>
+              <option value="B">B (Blood)</option>
             </select>
-            <select className="p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-500 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.amniotic_fluid_color} onChange={e => setFormData({...formData, amniotic_fluid_color: e.target.value})}>
-              <option value="N/A">N/A</option>
-              <option value="Clear">Clear</option>
-              <option value="Mec-stained">Mec-stained</option>
-              <option value="Blood-stained">Blood-stained</option>
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1 ml-1">Moulding</label>
+            <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-200 outline-none" value={formData.moulding} onChange={e => setFormData({...formData, moulding: e.target.value})}>
+              <option value="0">0</option>
+              <option value="+">+</option>
+              <option value="++">++</option>
+              <option value="+++">+++</option>
             </select>
           </div>
         </div>
 
         <button type="submit" className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:opacity-95 shadow-teal transition-all mt-4">
           <Save className="w-4 h-4" />
-          Append Hourly Segment
+          Append Hourly Observation
         </button>
       </form>
     </Modal>

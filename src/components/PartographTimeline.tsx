@@ -1,4 +1,4 @@
-import { Admission, Examination } from '../types';
+import { Admission, Observation } from '../types';
 import { Plus, ChevronDown, Clock, Activity, Thermometer, Heart, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';
 import { format, differenceInHours } from 'date-fns';
@@ -11,43 +11,39 @@ interface Props {
 }
 
 export function PartographTimeline({ admission, onAddSegment, onRecordDelivery }: Props) {
-  const exams = useMemo(() => {
-    return [...(admission.examinations || [])].sort((a, b) => 
-      new Date(a.examination_time).getTime() - new Date(b.examination_time).getTime()
+  const observations = useMemo(() => {
+    return [...(admission.observations || [])].sort((a, b) => 
+      new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
     );
-  }, [admission.examinations]);
+  }, [admission.observations]);
 
   const isHighRisk = admission.risk_factors && admission.risk_factors.toLowerCase() !== 'none';
 
   // Find the start of the active phase (dilatation >= 4cm)
   const activePhaseStartIndex = useMemo(() => {
-    return exams.findIndex(e => e.cx_dilatation >= 4);
-  }, [exams]);
+    return observations.findIndex(e => e.dilatation >= 4);
+  }, [observations]);
 
   const activePhaseStartTime = activePhaseStartIndex !== -1 
-    ? new Date(exams[activePhaseStartIndex].examination_time) 
+    ? new Date(observations[activePhaseStartIndex].recorded_at) 
     : null;
 
   // Determine current status relative to Alert/Action lines
   const laborStatus = useMemo(() => {
-    if (activePhaseStartIndex === -1 || exams.length === 0) return 'latent';
+    if (activePhaseStartIndex === -1 || observations.length === 0) return 'latent';
     
-    const latestExam = exams[exams.length - 1];
-    if (latestExam.cx_dilatation >= 10) return 'complete';
+    const latestObs = observations[observations.length - 1];
+    if (latestObs.dilatation >= 10) return 'complete';
 
-    const hoursSinceStart = differenceInHours(new Date(latestExam.examination_time), activePhaseStartTime!);
-    
-    // Alert Line: dilatation = startDilatation + hours (simplified WHO: start at 4, 1cm/hr)
-    // At hoursSinceStart = 0, dilatation = 4. At hoursSinceStart = 6, dilatation = 10.
-    // Action line is 4 hours to the right: start at hoursSinceStart = 4, dilatation = 4.
+    const hoursSinceStart = differenceInHours(new Date(latestObs.recorded_at), activePhaseStartTime!);
     
     const expectedDilatationAtTime = 4 + hoursSinceStart;
     const actionDilatationAtTime = 4 + (hoursSinceStart - 4);
 
-    if (latestExam.cx_dilatation < actionDilatationAtTime) return 'obstructed'; // Beyond action line
-    if (latestExam.cx_dilatation < expectedDilatationAtTime) return 'alert'; // Between alert and action
+    if (latestObs.dilatation < actionDilatationAtTime) return 'obstructed'; 
+    if (latestObs.dilatation < expectedDilatationAtTime) return 'alert'; 
     return 'normal';
-  }, [exams, activePhaseStartIndex, activePhaseStartTime]);
+  }, [observations, activePhaseStartIndex, activePhaseStartTime]);
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden transition-colors duration-300">
@@ -55,7 +51,7 @@ export function PartographTimeline({ admission, onAddSegment, onRecordDelivery }
       <section className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-end bg-slate-50/50 dark:bg-slate-800/30 gap-6">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
-            <h1 className="text-3xl font-light text-slate-800 dark:text-white tracking-tight">{admission.client_name}</h1>
+            <h1 className="text-3xl font-light text-slate-800 dark:text-white tracking-tight">{admission.patient_name}</h1>
             <span className="px-3 py-1 bg-teal-50 dark:bg-teal-900/30 text-primary rounded-full text-[10px] font-black uppercase tracking-wider border border-primary/10">
               Bed 0{Math.floor(Math.random() * 9) + 1}
             </span>
@@ -82,7 +78,7 @@ export function PartographTimeline({ admission, onAddSegment, onRecordDelivery }
             </div>
             <div>
               <p className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Admission</p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{admission.date_of_admission} • {admission.time_of_admission}</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{admission.admission_time}</p>
             </div>
             <div className="hidden lg:block">
               <p className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Expected Delivery</p>
@@ -90,7 +86,7 @@ export function PartographTimeline({ admission, onAddSegment, onRecordDelivery }
             </div>
             <div>
               <p className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Age</p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{admission.age} Years</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{admission.patient_age} Years</p>
             </div>
             <div className="col-span-2 sm:col-span-1 lg:col-span-1">
               <p className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Risk Factors</p>
@@ -122,12 +118,12 @@ export function PartographTimeline({ admission, onAddSegment, onRecordDelivery }
             </div>
 
             <div className="relative h-64 md:h-96 w-full bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 p-4 overflow-hidden">
-                <LaborChart exams={exams} activePhaseStartIndex={activePhaseStartIndex} />
+                <LaborChart observations={observations} activePhaseStartIndex={activePhaseStartIndex} />
             </div>
           </div>
         </section>
 
-        {/* Examination Timeline Area */}
+        {/* Observation Timeline Area */}
         <div className="flex-1 flex flex-col p-6 md:p-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -143,63 +139,62 @@ export function PartographTimeline({ admission, onAddSegment, onRecordDelivery }
                   <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest w-24">Time</th>
                   <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Temp/BP</th>
                   <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Pulse</th>
-                  <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Presentation</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Fetal HR</th>
                   <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Contractions</th>
                   <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Dilatation</th>
                   <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Descent</th>
-                  <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Liquor</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Liquor/Mould</th>
                 </tr>
               </thead>
               <tbody>
-                {exams.length === 0 ? (
+                {observations.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-20 text-center text-slate-300 dark:text-slate-600 italic font-medium">
                       No clinical segments recorded yet for this session.
                     </td>
                   </tr>
                 ) : (
-                  exams.map((exam, idx) => (
+                  observations.map((obs, idx) => (
                     <motion.tr 
-                      key={exam.id}
+                      key={obs.id}
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
                       className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       <td className="px-4 py-4 font-mono text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                        {format(new Date(exam.examination_time), 'HH:mm')}
+                        {format(new Date(obs.recorded_at), 'HH:mm')}
                       </td>
                       <td className="px-4 py-4 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        <span className="text-slate-400 font-normal">T:</span> {exam.temp}°C • <span className="text-slate-400 font-normal">BP:</span> {exam.bp}
+                        <span className="text-slate-400 font-normal">T:</span> {obs.temp}°C • <span className="text-slate-400 font-normal">BP:</span> {obs.bp_systolic}/{obs.bp_diastolic}
                       </td>
                       <td className="px-4 py-4 text-xs font-bold text-slate-800 dark:text-slate-200 text-center">
-                        {exam.pulse} <span className="text-[10px] text-slate-300 dark:text-slate-600 font-normal">bpm</span>
+                        {obs.pulse} <span className="text-[10px] text-slate-300 dark:text-slate-600 font-normal">bpm</span>
                       </td>
                       <td className="px-4 py-4 text-xs font-bold text-slate-800 dark:text-slate-200 text-center">
-                        <p>{exam.presentation}</p>
-                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-normal italic">{exam.lie}</p>
+                        {obs.fetal_heart_rate} <span className="text-[10px] text-slate-300 dark:text-slate-600 font-normal">bpm</span>
                       </td>
                       <td className="px-4 py-4 text-xs font-bold text-slate-800 dark:text-slate-200 text-center">
-                        <p>{exam.contractions} /10m</p>
-                        <p className={`text-[9px] font-black ${exam.contraction_strength === 'Strong' ? 'text-secondary' : 'text-slate-400 dark:text-slate-500'}`}>
-                          {exam.contraction_strength}
+                        <p>{obs.contractions_per_10min} /10m</p>
+                        <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500`}>
+                          {obs.contraction_duration}s
                         </p>
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-500 px-2.5 py-1 rounded-lg text-xs font-black ring-1 ring-amber-100 dark:ring-amber-900/30 italic">
-                          {exam.cx_dilatation} cm
+                          {obs.dilatation} cm
                         </span>
                       </td>
                       <td className="px-4 py-4 text-xs font-bold text-slate-800 dark:text-slate-200 text-center">
-                        {exam.descent}/5
+                        {obs.descent}/5
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex gap-2">
-                          <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${exam.membrane_status === 'Intact' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-secondary/10 text-secondary'}`}>
-                            {exam.membrane_status}
+                          <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400`}>
+                            {obs.amniotic_fluid}
                           </span>
                           <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded font-black uppercase tracking-wider">
-                            {exam.amniotic_fluid_color}
+                            {obs.moulding}
                           </span>
                         </div>
                       </td>
@@ -250,19 +245,19 @@ function LegendItem({ color, label, dashed }: { color: string, label: string, da
   );
 }
 
-function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], activePhaseStartIndex: number }) {
-  if (exams.length === 0) return null;
+function LaborChart({ observations, activePhaseStartIndex }: { observations: Observation[], activePhaseStartIndex: number }) {
+  if (observations.length === 0) return null;
 
   const width = 1000;
   const height = 400;
   const paddingX = 80;
   const paddingY = 60;
 
-  const firstExamTime = new Date(exams[0].examination_time);
-  const lastExamTime = new Date(exams[exams.length - 1].examination_time);
+  const firstObsTime = new Date(observations[0].recorded_at);
+  const lastObsTime = new Date(observations[observations.length - 1].recorded_at);
   
   // Show at least 12 hours or more if labor is longer
-  const laborDuration = differenceInHours(lastExamTime, firstExamTime);
+  const laborDuration = differenceInHours(lastObsTime, firstObsTime);
   const maxHours = Math.max(12, laborDuration + 4);
   
   const xScale = (hours: number) => paddingX + (hours / maxHours) * (width - 2 * paddingX);
@@ -271,8 +266,8 @@ function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], ac
   // Active Phase Lines (WHO standard)
   const alertLinePoints = useMemo(() => {
     if (activePhaseStartIndex === -1) return null;
-    const startTimeStamp = new Date(exams[activePhaseStartIndex].examination_time);
-    const startHour = differenceInHours(startTimeStamp, firstExamTime);
+    const startTimeStamp = new Date(observations[activePhaseStartIndex].recorded_at);
+    const startHour = differenceInHours(startTimeStamp, firstObsTime);
     
     return {
       x1: xScale(startHour),
@@ -280,12 +275,12 @@ function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], ac
       x2: xScale(startHour + 6), // 10cm - 4cm = 6 hours at 1cm/hr
       y2: yScale(10)
     };
-  }, [activePhaseStartIndex, exams, firstExamTime, maxHours]);
+  }, [activePhaseStartIndex, observations, firstObsTime, maxHours]);
 
   const actionLinePoints = useMemo(() => {
     if (!alertLinePoints) return null;
-    const startTimeStamp = new Date(exams[activePhaseStartIndex].examination_time);
-    const startHour = differenceInHours(startTimeStamp, firstExamTime) + 4; // 4 hours offset
+    const startTimeStamp = new Date(observations[activePhaseStartIndex].recorded_at);
+    const startHour = differenceInHours(startTimeStamp, firstObsTime) + 4; // 4 hours offset
 
     return {
       x1: xScale(startHour),
@@ -293,7 +288,7 @@ function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], ac
       x2: xScale(startHour + 6),
       y2: yScale(10)
     };
-  }, [alertLinePoints, exams, activePhaseStartIndex, firstExamTime, maxHours]);
+  }, [alertLinePoints, observations, activePhaseStartIndex, firstObsTime, maxHours]);
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full text-slate-400 select-none">
@@ -351,7 +346,7 @@ function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], ac
       <motion.path 
         initial={{ pathLength: 0 }}
         animate={{ pathLength: 1 }}
-        d={`M ${exams.map(e => `${xScale(differenceInHours(new Date(e.examination_time), firstExamTime))} ${yScale(e.cx_dilatation)}`).join(' L ')}`}
+        d={`M ${observations.map(e => `${xScale(differenceInHours(new Date(e.recorded_at), firstObsTime))} ${yScale(e.dilatation)}`).join(' L ')}`}
         fill="none"
         stroke="url(#grad-labor)"
         strokeWidth="6"
@@ -360,18 +355,18 @@ function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], ac
       />
 
       {/* Data Points */}
-      {exams.map((exam, i) => {
-        const x = xScale(differenceInHours(new Date(exam.examination_time), firstExamTime));
-        const y = yScale(exam.cx_dilatation);
+      {observations.map((obs, i) => {
+        const x = xScale(differenceInHours(new Date(obs.recorded_at), firstObsTime));
+        const y = yScale(obs.dilatation);
         return (
-          <g key={exam.id} className="group">
+          <g key={obs.id} className="group">
             <circle cx={x} cy={y} r="8" className="fill-primary stroke-white dark:stroke-slate-900 cursor-pointer transition-transform group-hover:scale-125" strokeWidth="3" />
-            {i === exams.length - 1 && (
+            {i === observations.length - 1 && (
               <circle cx={x} cy={y} r="12" className="fill-primary/20 animate-ping" />
             )}
             <foreignObject x={x - 40} y={y - 45} width="80" height="30" className="opacity-0 group-hover:opacity-100 transition-opacity">
               <div className="bg-slate-900 text-white text-[10px] font-black p-1 text-center rounded shadow-xl">
-                {exam.cx_dilatation}cm
+                {obs.dilatation}cm
               </div>
             </foreignObject>
           </g>
@@ -380,8 +375,8 @@ function LaborChart({ exams, activePhaseStartIndex }: { exams: Examination[], ac
 
       <defs>
         <linearGradient id="grad-labor" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#008080" />
-          <stop offset="100%" stopColor="#3dcdc4" />
+          <stop offset="0%" stopColor="#005B5C" />
+          <stop offset="100%" stopColor="#4D8F90" />
         </linearGradient>
       </defs>
     </svg>

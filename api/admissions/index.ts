@@ -1,32 +1,34 @@
 import { db, ensureDb } from "../_lib/db";
 import { uuidv4, encrypt } from "../_lib/utils";
 
-export default async function handler(req: any, res: any) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req: Request) {
   try {
     await ensureDb();
     if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
     }
 
     const { 
-      client_name, age, address, gravidity, parity, living, height, 
-      risk_factors, date_of_admission, time_of_admission, facility_id 
-    } = req.body;
+      patient_name, patient_age, patient_address, gravidity, parity, living, height, 
+      risk_factors, admission_time, facility_id, admitting_staff_id 
+    } = await req.json();
     
-    const event_id = uuidv4();
+    const id = uuidv4();
     await db.execute({
       sql: `INSERT INTO admissions (
-        event_id, facility_id, client_name, age, address, gravidity, parity, living, 
-        height, risk_factors, date_of_admission, time_of_admission, status
+        id, facility_id, admitting_staff_id, patient_name, patient_age, patient_address, gravidity, parity, living, 
+        height, risk_factors, admission_time, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       args: [
-        event_id, facility_id, encrypt(client_name), age, encrypt(address), Number(gravidity), Number(parity), Number(living),
-        Number(height), risk_factors, date_of_admission, time_of_admission
+        id, facility_id, admitting_staff_id, await encrypt(patient_name), patient_age, await encrypt(patient_address), Number(gravidity), Number(parity), Number(living),
+        Number(height), risk_factors, admission_time || new Date().toISOString()
       ]
     });
-    res.status(201).json({ event_id });
+    return new Response(JSON.stringify({ id }), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     console.error("Handler error:", err);
-    res.status(500).json({ error: "Service error", message: err.message });
+    return new Response(JSON.stringify({ error: "Service error", message: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

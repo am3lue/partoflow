@@ -5,13 +5,7 @@ export const config = {
 };
 
 const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
-
-// Smart URL detection
-// Locally: uses partoflow.db file
-// Vercel: uses DATABASE_URL from environment variables
-const dbUrl = isVercel 
-  ? process.env.DATABASE_URL 
-  : (process.env.DATABASE_URL || "file:partoflow.db");
+const dbUrl = process.env.DATABASE_URL || "file:partoflow.db";
 
 // Database client - Lazy initialized
 let dbInstance: any = null;
@@ -34,29 +28,25 @@ export async function ensureDb() {
   if (isInitialized && dbInstance) return;
   if (initPromise) return initPromise;
   
-  if (isVercel && (!dbUrl || dbUrl.trim() === "")) {
-    console.error("CRITICAL: DATABASE_URL is missing in Vercel environment.");
-    // We don't throw immediately to allow for a clearer error in the handler
-  }
-
   initPromise = (async () => {
     try {
-      console.log(`Connecting to DB: ${isVercel ? 'Remote (Vercel)' : 'Local/Dev'}`);
+      console.log(`[DB] Attempting connection. Target: ${dbUrl.startsWith('file:') ? 'Local File' : 'Remote Turso'}`);
       
       dbInstance = createClient({
-        url: dbUrl || "",
+        url: dbUrl,
         authToken: process.env.DATABASE_AUTH_TOKEN,
       });
 
-      // Simple connectivity test
+      // Test connection
       await dbInstance.execute("SELECT 1");
       
-      // Initialize schema if needed
-      await initDb();
+      // Initialize schema
+      await performInit(dbInstance);
       
       isInitialized = true;
+      console.log("[DB] System Ready.");
     } catch (err: any) {
-      console.error("DB Connection Failure:", err.message);
+      console.error("[DB] Critical Failure:", err.message);
       dbInstance = null;
       isInitialized = false;
       throw err;
@@ -68,21 +58,10 @@ export async function ensureDb() {
   return initPromise;
 }
 
-export async function initDb() {
+async function performInit(client: any) {
   try {
-    console.log("Initializing Clean Database Schema...");
-
-    // To perform a clean reset, you can uncomment these lines once and deploy, 
-    // then comment them back. For now, we use CREATE TABLE IF NOT EXISTS.
-    /*
-    await db.execute("DROP TABLE IF EXISTS observations");
-    await db.execute("DROP TABLE IF EXISTS admissions");
-    await db.execute("DROP TABLE IF EXISTS users");
-    await db.execute("DROP TABLE IF EXISTS facilities");
-    */
-
-    // 1. Facilities (The Hospitals/Dispensaries)
-    await db.execute(`
+    console.log("[DB] Initializing Facilities...");
+    await client.execute(`
       CREATE TABLE IF NOT EXISTS facilities (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -94,8 +73,8 @@ export async function initDb() {
       )
     `);
 
-    // 2. Users (Staff / Midwives)
-    await db.execute(`
+    console.log("[DB] Initializing Users...");
+    await client.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         id_number TEXT UNIQUE NOT NULL,
@@ -110,8 +89,8 @@ export async function initDb() {
       )
     `);
 
-    // 3. Admissions (Patient records)
-    await db.execute(`
+    console.log("[DB] Initializing Admissions...");
+    await client.execute(`
       CREATE TABLE IF NOT EXISTS admissions (
         id TEXT PRIMARY KEY,
         facility_id TEXT NOT NULL,
@@ -125,99 +104,62 @@ export async function initDb() {
         height INTEGER,
         risk_factors TEXT,
         admission_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status TEXT DEFAULT 'active', -- active, delivered, referred, discharged
+        status TEXT DEFAULT 'active',
         outcome TEXT,
         FOREIGN KEY (facility_id) REFERENCES facilities(id),
         FOREIGN KEY (admitting_staff_id) REFERENCES users(id)
       )
     `);
 
-    // 4. Observations (Partograph/Clinical data)
-    await db.execute(`
+    console.log("[DB] Initializing Observations...");
+    await client.execute(`
       CREATE TABLE IF NOT EXISTS observations (
         id TEXT PRIMARY KEY,
         admission_id TEXT NOT NULL,
         recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        
-        -- Maternal Vitals
         temp REAL,
         bp_systolic INTEGER,
         bp_diastolic INTEGER,
         pulse INTEGER,
-        
-        -- Fetal Status
         fetal_heart_rate INTEGER,
-        amniotic_fluid TEXT, -- I (Intact), C (Clear), M (Meconium), B (Blood)
-        moulding TEXT, -- 0, +, ++, +++
-        
-        -- Labor Progress
-        dilatation INTEGER, -- 0-10 cm
-        descent INTEGER, -- 0-5
+        amniotic_fluid TEXT,
+        moulding TEXT,
+        dilatation INTEGER,
+        descent INTEGER,
         contractions_per_10min INTEGER,
-        contraction_duration INTEGER, -- seconds
-        
-        -- Interventions
+        contraction_duration INTEGER,
         oxytocin_units REAL,
         oxytocin_drops_per_min INTEGER,
         drugs_given TEXT,
         urine_protein TEXT,
         urine_acetone TEXT,
         urine_volume INTEGER,
-        
         FOREIGN KEY (admission_id) REFERENCES admissions(id)
       )
     `);
 
-    // Ensure Default Admin Facility
+    console.log("[DB] Seeding Data...");
     const defaultFacilityId = "system-facility";
-    await db.execute({
+    await client.execute({
       sql: "INSERT OR IGNORE INTO facilities (id, name, type) VALUES (?, ?, ?)",
       args: [defaultFacilityId, "Ministry of Health", "Administrative"]
     });
 
-    // Ensure default admin exists
-    const adminCheck = await db.execute({
+    const adminCheck = await client.execute({
       sql: "SELECT id FROM users WHERE id_number = ?",
       args: ["ADMIN001"]
     });
 
     if (adminCheck.rows.length === 0) {
-      console.log("Creating default admin user...");
-      await db.execute({
+      await client.execute({
         sql: `INSERT INTO users (id, id_number, password, first_name, last_name, role, is_admin, facility_id) 
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         args: ["admin-1", "ADMIN001", "admin123", "System", "Admin", "admin", 1, defaultFacilityId]
       });
     }
-
-  } catch (err) {
-    console.error("DATABASE INITIALIZATION ERROR:", err);
-    throw err;
+  } catch (err: any) {
+    console.error("[DB] Schema Error:", err.message);
   }
 }
 
-async function checkAndAddMissingColumns() {
-  try {
-    const tableInfo = await db.execute("PRAGMA table_info(users)");
-    if (!tableInfo || !tableInfo.rows) return;
-    
-    const columns = tableInfo.rows.map((r: any) => r.name);
-    const requiredColumns = [
-      { name: "middle_name", type: "TEXT" },
-      { name: "facility_type", type: "TEXT" },
-      { name: "physical_address", type: "TEXT" }
-    ];
-
-    for (const col of requiredColumns) {
-      if (!columns.includes(col.name)) {
-        try {
-          await db.execute(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
-          console.log(`Added missing column: ${col.name}`);
-        } catch (e) {}
-      }
-    }
-  } catch (e) {
-    // PRAGMA might not be supported over HTTP in some cases
-    console.debug("Migration check skipped (PRAGMA likely not supported)");
-  }
-}
+export const initDb = () => performInit(dbInstance);
