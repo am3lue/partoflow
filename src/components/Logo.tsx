@@ -23,8 +23,8 @@ export function Logo({ size = 'md', className = '', variant = 'primary' }: LogoP
   };
 
   const colors = {
-    primary: 'bg-gradient-to-br from-primary to-teal-800 text-white shadow-xl shadow-teal/20 ring-4 ring-primary/10',
-    white: 'bg-white text-primary shadow-sm ring-1 ring-black/5'
+    primary: 'bg-white text-primary shadow-sm ring-1 ring-primary/10',
+    white: 'bg-white text-primary shadow-sm ring-1 ring-primary/10'
   };
 
   return (

@@ -40,27 +40,27 @@ export function UserGuide({ onClose }: Props) {
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-white/60 backdrop-blur-sm"
         onClick={onClose}
       />
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        className="relative w-full max-w-2xl bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl overflow-hidden flex flex-col border dark:border-slate-700 transition-colors duration-300"
+        className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-slate-50 transition-colors duration-300"
       >
-        <div className="p-8 border-b border-slate-50 dark:border-slate-700 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/50">
+        <div className="p-8 border-b border-primary/10 flex justify-between items-center bg-white">
           <div className="flex items-center gap-3">
-            <Logo size="md" />
+            <Logo size="md" variant="primary" />
             <div>
-              <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Clinical Guide v1.0</h2>
-              <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">Operating Procedures</p>
+              <h2 className="text-xl font-black text-primary tracking-tight">Clinical Guide v1.0</h2>
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest">Operating Procedures</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors group"
+            className="p-2 hover:bg-slate-50 rounded-xl transition-colors group"
           >
-            <X className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-100" />
+            <X className="w-5 h-5 text-primary" />
           </button>
         </div>
 
@@ -69,35 +69,35 @@ export function UserGuide({ onClose }: Props) {
             {steps.map((item, i) => (
               <div key={i} className="space-y-3 group text-left">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                    {item.icon}
+                  <div className="w-10 h-10 rounded-xl bg-white border border-primary/20 flex items-center justify-center text-primary transition-all duration-300">
+                    <div className="text-primary">{item.icon}</div>
                   </div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">{item.title}</h4>
+                  <h4 className="font-bold text-primary text-sm">{item.title}</h4>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed pl-13">
+                <p className="text-xs text-primary leading-relaxed pl-13">
                   {item.desc}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="p-6 bg-secondary/5 rounded-3xl border border-secondary/10 flex items-start gap-4">
-            <div className="p-2 bg-secondary/10 text-secondary rounded-lg">
-              <Share2 className="w-4 h-4" />
+          <div className="p-6 bg-slate-50 rounded-3xl border border-primary/10 flex items-start gap-4">
+            <div className="p-2 bg-white text-primary border border-primary/20 rounded-lg">
+              <Share2 className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h5 className="text-[10px] font-black text-secondary uppercase tracking-widest mb-1">Capacitor Deployment</h5>
-              <p className="text-[10px] text-slate-500 italic leading-relaxed">
+              <h5 className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Capacitor Deployment</h5>
+              <p className="text-[10px] text-primary italic leading-relaxed">
                 Platform is built on a responsive mobile-first architecture. Native app bridging via Capacitor is supported for offline field synchronization (Phase 4).
               </p>
             </div>
           </div>
         </div>
 
-        <div className="p-8 bg-slate-50/50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 flex justify-center">
+        <div className="p-8 bg-slate-50 border-t border-slate-50 flex justify-center">
           <button 
             onClick={onClose}
-            className="px-10 h-12 bg-slate-800 dark:bg-primary text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-900 dark:hover:opacity-90 transition-all shadow-xl"
+            className="px-10 h-12 bg-white text-primary border border-primary rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 transition-all shadow-xl"
           >
             Acknowledge Protocols
           </button>

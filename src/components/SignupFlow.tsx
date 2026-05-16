@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, MapPin, Users, Lock, ChevronRight, ChevronLeft, Plus, X, Globe, Map as MapIcon, Navigation, Search } from 'lucide-react';
+import { User, MapPin, Users, Lock, ChevronRight, ChevronLeft, Navigation, X } from 'lucide-react';
 import { Logo } from './Logo';
 import { UnifiedMap } from './UnifiedMap';
 import { detectPreciseLocation } from '../lib/location';
@@ -23,7 +23,6 @@ export interface SignupFlowProps {
   onComplete: (data: SignupData) => void;
   onBack: () => void;
   isDark?: boolean;
-  key?: string | number;
   isLoading?: boolean;
 }
 
@@ -44,75 +43,22 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
     password: ''
   });
 
-  useEffect(() => {
-    // Only attempt IP location when entering facility step for the first time
-    if (step === 2 && !formData.health_facility_name && isLocating === false) {
-      detectLocation();
-    }
-  }, [step]);
-
-  const detectLocation = async () => {
-    setIsLocating(true);
-    try {
-      const loc = await detectPreciseLocation();
-      setFormData(prev => ({ ...prev, location: { lat: loc.lat, lng: loc.lng } }));
-    } catch (err) {
-      console.error("Location detection error", err);
-    } finally {
-      setIsLocating(false);
-    }
-  };
-
-  const handleMapPositionChange = (pos: { lat: number, lng: number }) => {
-    setFormData(prev => ({ ...prev, location: pos }));
-    // Reverse geocoding with Nominatim if needed
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.display_name) {
-          setFormData(prev => ({ ...prev, physical_address: data.display_name }));
-        }
-      })
-      .catch(err => console.warn("Reverse geocode failed", err));
-  };
   const nextStep = () => setStep(s => Math.min(s + 1, 4));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
-
-  const addTeamMember = () => {
-    setFormData({
-      ...formData,
-      team_members: [...formData.team_members, { name: '', role: 'Nurse' }]
-    });
-  };
-
-  const removeMember = (index: number) => {
-    setFormData({
-      ...formData,
-      team_members: formData.team_members.filter((_, i) => i !== index)
-    });
-  };
-
-  const updateMember = (index: number, field: string, value: string) => {
-    const updated = [...formData.team_members];
-    updated[index] = { ...updated[index], [field]: value };
-    setFormData({ ...formData, team_members: updated });
-  };
 
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <Input isDark={isDark} label="First Name" value={formData.first_name} onChange={v => setFormData({...formData, first_name: v})} />
-                <Input isDark={isDark} label="Middle Name" value={formData.middle_name} onChange={v => setFormData({...formData, middle_name: v})} />
-                <Input isDark={isDark} label="Last Name" value={formData.last_name} onChange={v => setFormData({...formData, last_name: v})} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Input isDark={isDark} label="Age" type="number" value={formData.age} onChange={v => setFormData({...formData, age: v})} />
-                <Input isDark={isDark} label="Staff ID / Govt ID" value={formData.id_number} onChange={v => setFormData({...formData, id_number: v})} />
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Input label="First Name" value={formData.first_name} onChange={v => setFormData({...formData, first_name: v})} isDark={isDark} />
+              <Input label="Middle Name" value={formData.middle_name} onChange={v => setFormData({...formData, middle_name: v})} isDark={isDark} />
+              <Input label="Last Name" value={formData.last_name} onChange={v => setFormData({...formData, last_name: v})} isDark={isDark} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Age" type="number" value={formData.age} onChange={v => setFormData({...formData, age: v})} isDark={isDark} />
+              <Input label="Staff ID / Govt ID" value={formData.id_number} onChange={v => setFormData({...formData, id_number: v})} isDark={isDark} />
             </div>
           </div>
         );
@@ -120,11 +66,11 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <Input isDark={isDark} label="Facility Name" value={formData.health_facility_name} onChange={v => setFormData({...formData, health_facility_name: v})} />
+              <Input label="Facility Name" value={formData.health_facility_name} onChange={v => setFormData({...formData, health_facility_name: v})} isDark={isDark} />
               <div>
-                <label className="block text-[10px] font-black text-slate-700 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Type</label>
+                <label className="block text-[10px] font-black text-primary uppercase tracking-widest mb-1.5 ml-1">Type</label>
                 <select 
-                  className="w-full p-3 border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-slate-100 dark:bg-slate-700 border-primary/20 dark:border-slate-600 text-primary dark:text-primary-foreground"
+                  className="w-full p-3 border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-white border-primary/10 text-primary"
                   value={formData.facility_type}
                   onChange={e => setFormData({...formData, facility_type: e.target.value})}
                 >
@@ -135,179 +81,93 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
                 </select>
               </div>
             </div>
-            <Input 
-              isDark={isDark}
-              label="Physical Address / Street / Near" 
-              placeholder="Search or enter address..."
-              value={formData.physical_address} 
-              onChange={v => {
-                setFormData({...formData, physical_address: v});
-                // Debounced forward geocoding using Nominatim
-                if (v.length > 5) {
-                  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                      if (data.length > 0) {
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          location: { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } 
-                        }));
-                      }
-                    })
-                    .catch(e => console.warn("Geocode failed", e));
-                }
-              }} 
-            />
-            <div className="space-y-2">
-              <div className="flex justify-between items-end mb-1.5 ml-1">
-                <label className="block text-[10px] font-black text-slate-700 dark:text-slate-500 uppercase tracking-widest">Location on Map</label>
-                <button 
-                  onClick={detectLocation}
-                  disabled={isLocating}
-                  className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest hover:opacity-70 transition-opacity"
-                >
-                  <Navigation className={`w-3 h-3 ${isLocating ? 'animate-pulse' : ''}`} />
-                  {isLocating ? 'Locating...' : 'Detect Me'}
-                </button>
-              </div>
-              <div className="h-48 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 relative z-0">
-                <UnifiedMap 
+            <Input label="Physical Address" placeholder="Enter street or location details..." value={formData.physical_address} onChange={v => setFormData({...formData, physical_address: v})} isDark={isDark} />
+            <div className="h-40 rounded-2xl overflow-hidden border border-primary/10 relative z-0">
+               <UnifiedMap 
                   center={formData.location || { lat: -6.7924, lng: 39.2083 }}
                   markers={formData.location ? [formData.location] : []}
-                  onMapClick={(pos) => handleMapPositionChange(pos)}
+                  onMapClick={(pos) => setFormData(prev => ({ ...prev, location: pos }))}
                   isDark={isDark}
                 />
-              </div>
-              <p className="text-[9px] text-slate-400 italic text-center">Tap map or search to set: {formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : 'Not set'}</p>
             </div>
           </div>
         );
       case 3:
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center px-1">
-              <p className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Medical Staff Team</p>
-              <button 
-                onClick={addTeamMember}
-                className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="max-h-64 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-              {formData.team_members.map((member, i) => (
-                <div key={i} className="flex gap-2 items-end p-3 rounded-xl border relative group transition-colors bg-slate-100 dark:bg-slate-700/50 border-primary/20 dark:border-slate-600"
-                >
-                  <div className="flex-1">
-                    <label className="block text-[8px] font-black uppercase mb-1 text-primary">Full Name</label>
-                    <input 
-                      className="w-full bg-transparent text-xs font-bold outline-none placeholder:text-primary/50 text-primary dark:text-slate-200"
-                      value={member.name}
-                      onChange={e => updateMember(i, 'name', e.target.value)}
-                      placeholder="e.g. Dr. Jane Doe"
-                    />
-                  </div>
-                  <div className="w-32">
-                    <label className="block text-[8px] font-black text-slate-500 dark:text-slate-500 uppercase mb-1">Role</label>
-                    <select 
-                      className="w-full bg-transparent text-xs font-bold outline-none text-primary dark:text-slate-200"
-                      value={member.role}
-                      onChange={e => updateMember(i, 'role', e.target.value)}
-                    >
+             <p className="text-[10px] font-black text-primary uppercase tracking-widest px-1">Medical Staff Team (Optional)</p>
+             <div className="max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
+                {formData.team_members.map((member, i) => (
+                  <div key={i} className="flex gap-2 p-3 bg-white border border-primary/10 rounded-xl relative">
+                    <input className="flex-1 bg-transparent text-xs font-bold text-primary outline-none placeholder:text-primary/30" value={member.name} onChange={e => {
+                      const updated = [...formData.team_members];
+                      updated[i].name = e.target.value;
+                      setFormData({...formData, team_members: updated});
+                    }} placeholder="Member Name" />
+                    <select className="bg-transparent text-xs font-bold text-primary outline-none" value={member.role} onChange={e => {
+                      const updated = [...formData.team_members];
+                      updated[i].role = e.target.value;
+                      setFormData({...formData, team_members: updated});
+                    }}>
                       <option>Nurse</option>
                       <option>Midwife</option>
-                      <option>MO</option>
-                      <option>AMO</option>
                     </select>
                   </div>
-                  <button 
-                    onClick={() => removeMember(i)}
-                    className="absolute -top-2 -right-2 bg-white dark:bg-slate-600 p-1 rounded-full shadow-sm border border-slate-100 dark:border-slate-500 opacity-0 group-hover:opacity-100 transition-all active:scale-95"
-                  >
-                    <X className="w-3 h-3 text-slate-400 dark:text-slate-200" />
-                  </button>
-                </div>
-              ))}
-              {formData.team_members.length === 0 && (
-                <div className="py-8 text-center border-2 border-dashed border-slate-100 dark:border-slate-700 rounded-2xl">
-                  <p className="text-[9px] text-slate-300 dark:text-slate-600 font-black uppercase py-4">Add your support staff</p>
-                </div>
-              )}
-            </div>
+                ))}
+                <button onClick={() => setFormData({...formData, team_members: [...formData.team_members, { name: '', role: 'Nurse' }]})} className="w-full py-3 border-2 border-dashed border-primary/10 rounded-xl text-[10px] font-black uppercase text-primary hover:bg-primary/5 transition-all">
+                  + Add Member
+                </button>
+             </div>
           </div>
         );
       case 4:
         return (
-          <div className="space-y-6">
-            <div className="p-6 bg-primary/5 dark:bg-primary/10 rounded-3xl border border-primary/10 dark:border-primary/20 text-center space-y-2 transition-colors">
-              <Lock className="w-8 h-8 text-primary mx-auto opacity-50" />
-              <h3 className="text-sm font-bold text-primary">Secure Access</h3>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed max-w-[200px] mx-auto italic">
-                Set a strong password to protect sensitive patient records and clinical history.
-              </p>
+          <div className="space-y-6 text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-primary" />
             </div>
-            <Input isDark={isDark} label="Access Password" type="password" value={formData.password} onChange={v => setFormData({...formData, password: v})} />
+            <h3 className="text-sm font-bold text-primary mb-6">Final Security Protocol</h3>
+            <Input label="Access Password" type="password" value={formData.password} onChange={v => setFormData({...formData, password: v})} isDark={isDark} />
           </div>
         );
     }
   };
 
   return (
-    <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl p-10 relative overflow-hidden border border-slate-100 dark:border-slate-700 transition-colors duration-300">
+    <div className="w-full max-w-md bg-white rounded-[40px] shadow-2xl p-10 relative overflow-hidden border border-primary/10 transition-colors duration-300">
       <div className="flex flex-col items-center justify-center mb-10">
         <Logo size="lg" className="mb-4" />
-        <h2 className="text-xl font-black uppercase tracking-tighter text-slate-800 dark:text-white">Institutional Onboarding</h2>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Protocol v2.0.4</p>
+        <h2 className="text-xl font-black uppercase tracking-tighter text-primary">Institutional Onboarding</h2>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary/40">Step 0{step} of 04</p>
       </div>
 
-      <div className="flex justify-between items-center mb-8">
-                <div className="flex gap-1.5">
-          {[1,2,3,4].map(s => (
-            <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ${s === step ? 'w-8 bg-primary' : 'w-1.5 bg-slate-200 dark:bg-slate-700'}`} />
-          ))}
-        </div>
-        <button onClick={onBack} disabled={isLoading} className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest hover:text-slate-700 disabled:opacity-30">Cancel</button>
+      <div className="flex gap-1.5 mb-8 justify-center">
+        {[1,2,3,4].map(s => (
+          <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ${s === step ? 'w-8 bg-primary' : 'w-1.5 bg-primary/10'}`} />
+        ))}
       </div>
 
-      <div className="mb-8">
-        <h2 
-          className="text-2xl font-black tracking-tight leading-none mb-2 transition-colors duration-300 text-primary"
-        >
-          {step === 1 && "Personal ID"}
-          {step === 2 && "Clinical Facility"}
-          {step === 3 && "Medical Team"}
-          {step === 4 && "Final Security"}
-        </h2>
-        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Step 0{step} of 04</p>
-      </div>
-
-      <div className="min-h-[300px]">
+      <div className="min-h-[260px]">
         {renderStep()}
       </div>
 
       <div className="mt-10 flex gap-3">
-        {step > 1 && (
-          <button 
-            disabled={isLoading}
-            onClick={prevStep}
-            className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all border border-slate-100 dark:border-slate-600 shadow-sm disabled:opacity-50"
-          >
-            <ChevronLeft className="w-6 h-6" />
+        {step > 1 ? (
+          <button onClick={prevStep} className="h-14 px-6 rounded-2xl bg-white text-primary font-bold active:scale-95 transition-all border border-primary/20">
+            Back
+          </button>
+        ) : (
+          <button onClick={onBack} className="h-14 px-6 rounded-2xl bg-white text-primary font-bold active:scale-95 transition-all border border-primary/20">
+            Cancel
           </button>
         )}
+
         <button 
           disabled={isLoading}
           onClick={step === 4 ? () => onComplete(formData) : nextStep}
-          className="flex-1 h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-teal hover:opacity-95 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-14 bg-white text-primary border border-primary/20 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:bg-primary/5 transition-all flex items-center justify-center gap-2 group active:scale-[0.98] disabled:opacity-50"
         >
-          {step === 4 ? (
-            isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Registering...
-              </div>
-            ) : "Complete Setup"
-          ) : "Next Protocol"}
+          {step === 4 ? (isLoading ? "Validating..." : "Complete Setup") : "Next Step"}
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
@@ -318,11 +178,11 @@ export function SignupFlow({ onComplete, onBack, isDark, isLoading }: SignupFlow
 function Input({ label, type = 'text', value, onChange, placeholder, isDark }: { label: string, type?: string, value: string, onChange: (v: string) => void, placeholder?: string, isDark?: boolean }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+      <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">{label}</label>
       <input 
         type={type}
         placeholder={placeholder}
-        className="w-full p-4 border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 outline-none transition-all bg-slate-100 dark:bg-slate-700/50 border-primary/20 dark:border-slate-600 text-primary dark:text-slate-100"
+        className="w-full p-4 rounded-2xl text-sm font-bold border transition-all outline-none bg-white border-primary/10 text-primary placeholder:text-primary/30 focus:border-primary focus:ring-4 focus:ring-primary/5"
         value={value}
         onChange={e => onChange(e.target.value)}
       />

@@ -8,7 +8,7 @@ import healthHandler from "./api/health";
 import loginHandler from "./api/login";
 import signupHandler from "./api/signup";
 import facilitiesHandler from "./api/facilities";
-import examinationsHandler from "./api/examinations";
+import observationsHandler from "./api/observations";
 import admissionsIndexHandler from "./api/admissions/index";
 import admissionsActiveHandler from "./api/admissions/active";
 import admissionsHistoryHandler from "./api/admissions/history";
@@ -44,7 +44,7 @@ app.get("/api/health", wrap(healthHandler));
 app.post("/api/login", wrap(loginHandler));
 app.post("/api/signup", wrap(signupHandler));
 app.get("/api/facilities", wrap(facilitiesHandler));
-app.post("/api/examinations", wrap(examinationsHandler));
+app.post("/api/observations", wrap(observationsHandler));
 
 app.post("/api/admissions", wrap(admissionsIndexHandler));
 app.get("/api/admissions/active", wrap(admissionsActiveHandler));
